@@ -28,30 +28,60 @@ with ui.tab_panels(tabs_t, value=tabs_t_one).classes('w-full'):
     }
 
     with ui.tab_panel(tabs_t_one):
-        records_per_hour = get_record_count_per_hour()
-        fig = copy.deepcopy(fig_template)
-        fig['data'][0]['name'] = 'records per hour'
-        for item in records_per_hour:
-            fig['data'][0]['x'].append(item[0])
-            fig['data'][0]['y'].append(item[1])
-        ui.plotly(fig).classes('w-100 h-80')
+        with ui.card():
+            records_per_hour = get_record_count_per_hour()
+            fig = copy.deepcopy(fig_template)
+            fig['data'][0]['name'] = 'records per hour'
+            for item in records_per_hour:
+                fig['data'][0]['x'].append(item[0])
+                fig['data'][0]['y'].append(item[1])
+            ui.plotly(fig).classes('w-100 h-80')
+
+        with ui.card():
+            unique_ip_count_per_hour = get_unique_ip_count_per_hour()
+            fig2 = copy.deepcopy(fig_template)
+            fig2['data'][0]['name'] = 'unique IP4/6 addr per hour'
+            for item in unique_ip_count_per_hour:
+                fig2['data'][0]['x'].append(item[0])
+                fig2['data'][0]['y'].append(item[1])
+            ui.plotly(fig2).classes('w-100 h-80')
 
     with ui.tab_panel(tabs_t_two):
-        records_per_hour = get_record_count_per_day_of_week()
-        fig = copy.deepcopy(fig_template)
-        fig['data'][0]['name'] = 'records per day-of-week'
-        for item in records_per_hour:
-            fig['data'][0]['x'].append(item[0])
-            fig['data'][0]['y'].append(item[1])
-        ui.plotly(fig).classes('w-100 h-80')
+        with ui.card():
+            records_per_hour = get_record_count_per_day_of_week()
+            fig = copy.deepcopy(fig_template)
+            fig['data'][0]['name'] = 'records per day-of-week'
+            for item in records_per_hour:
+                fig['data'][0]['x'].append(item[0])
+                fig['data'][0]['y'].append(item[1])
+            ui.plotly(fig).classes('w-100 h-80')
+
+        with ui.card():
+            unique_ip_count_per_day_of_week = get_unique_ip_count_per_day_of_week()
+            fig = copy.deepcopy(fig_template)
+            fig['data'][0]['name'] = 'unique IP4/6 addr per day-of-week'
+            for item in unique_ip_count_per_day_of_week:
+                fig['data'][0]['x'].append(item[0])
+                fig['data'][0]['y'].append(item[1])
+            ui.plotly(fig).classes('w-100 h-80')
 
     with ui.tab_panel(tabs_t_three):
-        records_per_month = get_record_count_per_month()
-        fig = copy.deepcopy(fig_template)
-        fig['data'][0]['name'] = 'records per month'
-        for item in records_per_month:
-            fig['data'][0]['x'].append(item[0])
-            fig['data'][0]['y'].append(item[1])
-        ui.plotly(fig).classes('w-100 h-80')
+        with ui.card():
+            records_per_month = get_record_count_per_month()
+            fig = copy.deepcopy(fig_template)
+            fig['data'][0]['name'] = 'records per month'
+            for item in records_per_month:
+                fig['data'][0]['x'].append(item[0])
+                fig['data'][0]['y'].append(item[1])
+            ui.plotly(fig).classes('w-100 h-80')
+
+        with ui.card():
+            unique_ips_per_month = get_unique_ip_count_per_month()
+            fig = copy.deepcopy(fig_template)
+            fig['data'][0]['name'] = 'unique IP4/6 addr per month'
+            for item in unique_ips_per_month:
+                fig['data'][0]['x'].append(item[0])
+                fig['data'][0]['y'].append(item[1])
+            ui.plotly(fig).classes('w-100 h-80')
 
 ui.run(show=False)
