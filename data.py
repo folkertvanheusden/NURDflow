@@ -51,6 +51,26 @@ def get_unique_ip_count_per_month():
              cur.execute("SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY m ORDER BY m ASC")
              return cur.fetchall()
 
+# ---
+
+def get_count_per_port_per_hour(ports):
+    with psycopg2.connect(get_db_parameters()) as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(*) AS n, dst_port AS d FROM records WHERE dst_port IN %s GROUP BY h, dst_port ORDER BY h ASC', [ports])
+            return cur.fetchall()
+
+def get_count_per_port_per_day_of_week(ports):
+    with psycopg2.connect(get_db_parameters()) as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(*) AS n, dst_port AS d FROM records WHERE dst_port IN %s GROUP BY dow, dst_port ORDER BY dow ASC', [ports])
+            return cur.fetchall()
+
+def get_count_per_port_per_month(ports):
+    with psycopg2.connect(get_db_parameters()) as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(*) AS n, dst_port AS d FROM records WHERE dst_port IN %s GROUP BY m, dst_port ORDER BY m ASC', [ports])
+            return cur.fetchall()
+
 if __name__ == "__main__":
     print(get_record_count_per_date())
     print(get_record_count_per_hour())
@@ -60,3 +80,7 @@ if __name__ == "__main__":
     print(get_unique_ip_count_per_hour())
     print(get_unique_ip_count_per_day_of_week())
     print(get_unique_ip_count_per_month())
+
+    print(get_count_per_port_per_hour((80, 443, 5900)))
+    print(get_count_per_port_per_day_of_week((80, 443, 5900)))
+    print(get_count_per_port_per_month((80, 443, 5900)))
