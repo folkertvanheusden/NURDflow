@@ -36,19 +36,19 @@ def get_record_count_per_month():
 def get_unique_ip_count_per_hour():
     with psycopg2.connect(get_db_parameters()) as conn:
          with conn.cursor() as cur:
-             cur.execute('SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(DISTINCT(source_address)) AS n FROM records GROUP BY h ORDER BY h ASC')
+             cur.execute("SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY h ORDER BY h ASC")
              return cur.fetchall()
 
 def get_unique_ip_count_per_day_of_week():
     with psycopg2.connect(get_db_parameters()) as conn:
          with conn.cursor() as cur:
-             cur.execute('SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(DISTINCT(source_address)) AS n FROM records GROUP BY dow ORDER BY dow ASC')
+             cur.execute("SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY dow ORDER BY dow ASC")
              return cur.fetchall()
 
 def get_unique_ip_count_per_month():
     with psycopg2.connect(get_db_parameters()) as conn:
          with conn.cursor() as cur:
-             cur.execute('SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(DISTINCT(source_address)) AS n FROM records GROUP BY m ORDER BY m ASC')
+             cur.execute("SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY m ORDER BY m ASC")
              return cur.fetchall()
 
 if __name__ == "__main__":
