@@ -51,15 +51,18 @@ with ui.tabs().classes('w-full') as tabs_t:
 
 with ui.tab_panels(tabs_t, value=tabs_t_one).classes('w-full'):
     with ui.tab_panel(tabs_t_one):
-        create_fig_card(get_record_count_per_hour(), 'records per hour', False)
-        create_fig_card(get_unique_ip_count_per_hour(), 'unique IP4/6 addresses per hour', True)
+        with ui.row():
+            create_fig_card(get_record_count_per_hour(), 'records per hour', False)
+            create_fig_card(get_unique_ip_count_per_hour(), 'unique IP4/6 addresses per hour', True)
 
     with ui.tab_panel(tabs_t_two):
-        create_fig_card(get_record_count_per_day_of_week(), 'records per day-of-week', False)
-        create_fig_card(get_unique_ip_count_per_day_of_week(), 'unique IP4/6 addresses per day-of-week', True)
+        with ui.row():
+            create_fig_card(get_record_count_per_day_of_week(), 'records per day-of-week', False)
+            create_fig_card(get_unique_ip_count_per_day_of_week(), 'unique IP4/6 addresses per day-of-week', True)
 
     with ui.tab_panel(tabs_t_three):
-        create_fig_card(get_record_count_per_month(), 'records per month', False)
-        create_fig_card(get_unique_ip_count_per_month(), 'unique IP4/6 addr per month', True)
+        with ui.row():
+            create_fig_card(get_record_count_per_month(), 'records per month', False)
+            create_fig_card(get_unique_ip_count_per_month(), 'unique IP4/6 addr per month', True)
 
 ui.run(show=False)
