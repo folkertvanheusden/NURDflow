@@ -86,7 +86,8 @@ with ui.column():
     with ui.tabs().classes('w-full') as tabs_t:
         tabs_t_one = ui.tab('per hour')
         tabs_t_two = ui.tab('per day-of-week')
-        tabs_t_three = ui.tab('per month')
+        tabs_t_three = ui.tab('per day-of-the-month')
+        tabs_t_four = ui.tab('per month')
 
     with ui.tab_panels(tabs_t, value=tabs_t_one).classes('w-full'):
         ports = (80, 443, 5900, 123)
@@ -104,7 +105,14 @@ with ui.column():
 
         with ui.tab_panel(tabs_t_three):
             with ui.row():
+                create_fig_card(get_record_count_per_month_day(), 'records per day of the month', False)
+                create_fig_card(get_unique_ip_count_per_month_day(), 'unique IP4/6 addr per day of the month', True)
+                create_fig_card_per(get_count_per_port_per_month_day(ports), 'count per dst-port', ports)
+
+        with ui.tab_panel(tabs_t_four):
+            with ui.row():
                 create_fig_card(get_record_count_per_month(), 'records per month', False)
                 create_fig_card(get_unique_ip_count_per_month(), 'unique IP4/6 addr per month', True)
                 create_fig_card_per(get_count_per_port_per_month(ports), 'count per dst-port', ports)
+
 ui.run(show=False)

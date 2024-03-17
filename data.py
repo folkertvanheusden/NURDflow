@@ -25,6 +25,12 @@ def get_record_count_per_day_of_week():
              cur.execute('SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(*) AS n FROM records GROUP BY dow ORDER BY dow ASC')
              return cur.fetchall()
 
+def get_record_count_per_month_day():
+    with psycopg2.connect(get_db_parameters()) as conn:
+         with conn.cursor() as cur:
+             cur.execute('SELECT EXTRACT(DAY FROM ts) AS md, COUNT(*) AS n FROM records GROUP BY md ORDER BY md ASC')
+             return cur.fetchall()
+
 def get_record_count_per_month():
     with psycopg2.connect(get_db_parameters()) as conn:
          with conn.cursor() as cur:
@@ -45,6 +51,12 @@ def get_unique_ip_count_per_day_of_week():
              cur.execute("SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY dow ORDER BY dow ASC")
              return cur.fetchall()
 
+def get_unique_ip_count_per_month_day():
+    with psycopg2.connect(get_db_parameters()) as conn:
+         with conn.cursor() as cur:
+             cur.execute("SELECT EXTRACT(DAY FROM ts) AS md, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY md ORDER BY md ASC")
+             return cur.fetchall()
+
 def get_unique_ip_count_per_month():
     with psycopg2.connect(get_db_parameters()) as conn:
          with conn.cursor() as cur:
@@ -63,6 +75,12 @@ def get_count_per_port_per_day_of_week(ports):
     with psycopg2.connect(get_db_parameters()) as conn:
         with conn.cursor() as cur:
             cur.execute('SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(*) AS n, dst_port AS d FROM records WHERE dst_port IN %s GROUP BY dow, dst_port ORDER BY dow ASC', [ports])
+            return cur.fetchall()
+
+def get_count_per_port_per_month_day(ports):
+    with psycopg2.connect(get_db_parameters()) as conn:
+        with conn.cursor() as cur:
+            cur.execute('SELECT EXTRACT(DAY FROM ts) AS md, COUNT(*) AS n, dst_port AS d FROM records WHERE dst_port IN %s GROUP BY md, dst_port ORDER BY md ASC', [ports])
             return cur.fetchall()
 
 def get_count_per_port_per_month(ports):
