@@ -91,6 +91,7 @@ with ui.column():
 
     with ui.tab_panels(tabs_t, value=tabs_t_one).classes('w-full'):
         ports = (80, 443, 5900, 123)
+        ip_protocols = (1, 6, 17)
         with ui.tab_panel(tabs_t_one):
             with ui.row():
                 create_fig_card(get_record_count_per_hour(), 'records', False)
@@ -98,6 +99,7 @@ with ui.column():
                 create_fig_card_per(get_count_per_port_per_hour(ports), 'count per dst-port', ports)
                 create_fig_card(get_count_per_src_dst_address_per_hour(), 'source/destination IP address pairs', True)
                 create_fig_card(get_count_per_src_dst_mac_address_per_hour(), 'source/destination MAC address pairs', False)
+                create_fig_card_per(get_ip_protocol_count_per_hour(ip_protocols), 'IP protocol', ip_protocols)
 
         with ui.tab_panel(tabs_t_two):
             with ui.row():
@@ -106,6 +108,7 @@ with ui.column():
                 create_fig_card_per(get_count_per_port_per_day_of_week(ports), 'count per dst-port', ports)
                 create_fig_card(get_count_per_src_dst_address_per_day_of_week(), 'source/destination IP address pairs', True)
                 create_fig_card(get_count_per_src_dst_mac_address_per_day_of_week(), 'source/destination MAC address pairs', False)
+                create_fig_card_per(get_ip_protocol_count_per_day_of_week(ip_protocols), 'IP protocol', ip_protocols)
 
         with ui.tab_panel(tabs_t_three):
             with ui.row():
@@ -114,6 +117,7 @@ with ui.column():
                 create_fig_card_per(get_count_per_port_per_month_day(ports), 'count per dst-port', ports)
                 create_fig_card(get_count_per_src_dst_address_per_month_day(), 'source/destination IP address pairs', True)
                 create_fig_card(get_count_per_src_dst_mac_address_per_month_day(), 'source/destination MAC address pairs', False)
+                create_fig_card_per(get_ip_protocol_count_per_month_day(ip_protocols), 'IP protocol', ip_protocols)
 
         with ui.tab_panel(tabs_t_four):
             with ui.row():
@@ -122,5 +126,6 @@ with ui.column():
                 create_fig_card_per(get_count_per_port_per_month(ports), 'count per dst-port', ports)
                 create_fig_card(get_count_per_src_dst_address_per_month(), 'source/destination IP address pairs', True)
                 create_fig_card(get_count_per_src_dst_mac_address_per_month(), 'source/destination MAC address pairs', False)
+                create_fig_card_per(get_ip_protocol_count_per_month(ip_protocols), 'IP protocol', ip_protocols)
 
 ui.run(show=False)

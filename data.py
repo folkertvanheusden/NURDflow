@@ -141,6 +141,38 @@ def get_count_per_src_dst_mac_address_per_month():
             cur.execute("SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(DISTINCT(miscellaneous->'sourceMacAddress', destination_address->'postDestinationMacAddress')) AS n FROM records GROUP BY m ORDER BY m ASC")
             return cur.fetchall()
 
+# ---
+
+def get_ip_protocol_count_per_date(protocols):
+    with psycopg2.connect(get_db_parameters()) as conn:
+         with conn.cursor() as cur:
+             cur.execute('SELECT DATE(ts) AS d, COUNT(*) AS n, ip_protocol FROM records WHERE ip_protocol IN %s GROUP BY d, ip_protocol ORDER BY d ASC', [protocols])
+             return cur.fetchall()
+
+def get_ip_protocol_count_per_hour(protocols):
+    with psycopg2.connect(get_db_parameters()) as conn:
+         with conn.cursor() as cur:
+             cur.execute('SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(*) AS n, ip_protocol FROM records WHERE ip_protocol IN %s GROUP BY h, ip_protocol ORDER BY h ASC', [protocols])
+             return cur.fetchall()
+
+def get_ip_protocol_count_per_day_of_week(protocols):
+    with psycopg2.connect(get_db_parameters()) as conn:
+         with conn.cursor() as cur:
+             cur.execute('SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(*) AS n, ip_protocol FROM records WHERE ip_protocol IN %s GROUP BY dow, ip_protocol ORDER BY dow ASC', [protocols])
+             return cur.fetchall()
+
+def get_ip_protocol_count_per_month_day(protocols):
+    with psycopg2.connect(get_db_parameters()) as conn:
+         with conn.cursor() as cur:
+             cur.execute('SELECT EXTRACT(DAY FROM ts) AS md, COUNT(*) AS n, ip_protocol FROM records WHERE ip_protocol IN %s GROUP BY md, ip_protocol ORDER BY md ASC', [protocols])
+             return cur.fetchall()
+
+def get_ip_protocol_count_per_month(protocols):
+    with psycopg2.connect(get_db_parameters()) as conn:
+         with conn.cursor() as cur:
+             cur.execute('SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(*) AS n, ip_protocol FROM records WHERE ip_protocol IN %s GROUP BY m, ip_protocol ORDER BY m ASC', [protocols])
+             return cur.fetchall()
+
 if __name__ == "__main__":
     print(get_record_count_per_date())
     print(get_record_count_per_hour())
@@ -165,3 +197,8 @@ if __name__ == "__main__":
     print(get_count_per_src_dst_mac_address_per_day_of_week())
     print(get_count_per_src_dst_mac_address_per_month_day())
     print(get_count_per_src_dst_mac_address_per_month())
+
+    print(get_ip_protocol_count_per_hour((1, 6, 17)))
+    print(get_ip_protocol_count_per_day_of_week((1, 6, 17)))
+    print(get_ip_protocol_count_per_month_day((1, 6, 17)))
+    print(get_ip_protocol_count_per_month((1, 6, 17)))
