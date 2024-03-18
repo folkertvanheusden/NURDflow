@@ -66,8 +66,18 @@ def create_fig_card_per(data, title, items):
                 'y': [],
             })
 
+    fig['data'].append({
+            'type': 'scatter',
+            'name': 'others',
+            'x': [],
+            'y': [],
+        })
+
     for item in data:
-        nr = items.index(item[2])
+        if item[2] in items:
+            nr = items.index(item[2])
+        else:
+            nr = -1
         fig['data'][nr]['x'].append(item[0])
         fig['data'][nr]['y'].append(item[1])
 
