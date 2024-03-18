@@ -89,11 +89,13 @@ class graph:
         self.plot.update()
 
 ports = ((80, 'HTTP'), (443, 'HTTPS'), (5900, 'VNC'), (123, 'NTP'))
+ip_versions = ((4, 'IPv4'), (6, 'IPv6'))
 ip_protocols = ((1, 'ICMP'), (6, 'TCP'), (17, 'UDP'))
 
 g_hour_c = []
 g_hour_c.append(graph('record count', 'HOUR', get_record, None, (('n', 'n'),), None, graph.SumOrCount.none))
 g_hour_c.append(graph('unique IP address', 'HOUR', get_unique_ip_count, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None, graph.SumOrCount.none))
+g_hour_c.append(graph('IP version', 'HOUR', get_count_per, 'ip_version', ip_versions, None, graph.SumOrCount.none))
 g_hour_c.append(graph('IP protocol counts', 'HOUR', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.none))
 g_hour_c.append(graph('destination port', 'HOUR', get_count_per, 'dst_port', ports, '(ip_protocol = 6 OR ip_protocol = 17)', graph.SumOrCount.none))
 g_hour_c.append(graph('source/destination IP address pair', 'HOUR', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None, graph.SumOrCount.none))
@@ -101,12 +103,14 @@ g_hour_c.append(graph('source/destination MAC address pair', 'HOUR', get_count_p
 
 g_hour_b = []
 g_hour_b.append(graph('record byte sum', 'HOUR', get_record, None, (('n', 'n'),), None, graph.SumOrCount.bcount))
+g_hour_b.append(graph('IP version', 'HOUR', get_count_per, 'ip_version', ip_versions, None, graph.SumOrCount.bcount))
 g_hour_b.append(graph('IP protocol counts', 'HOUR', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.bcount))
 g_hour_b.append(graph('destination port', 'HOUR', get_count_per, 'dst_port', ports, '(ip_protocol = 6 OR ip_protocol = 17)', graph.SumOrCount.bcount))
 
 g_dow_c = []
 g_dow_c.append(graph('record count', 'ISODOW', get_record, None, (('n', 'n'),), None, graph.SumOrCount.none))
 g_dow_c.append(graph('unique IP address', 'ISODOW', get_unique_ip_count, None, ('IPv4', 'IPv6',), None, graph.SumOrCount.none))
+g_dow_c.append(graph('IP version', 'ISODOW', get_count_per, 'ip_version', ip_versions, None, graph.SumOrCount.none))
 g_dow_c.append(graph('IP protocol counts', 'ISODOW', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.none))
 g_dow_c.append(graph('destination port', 'ISODOW', get_count_per, 'dst_port', ports, None, graph.SumOrCount.none))
 g_dow_c.append(graph('source/destination IP address pair', 'ISODOW', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None, graph.SumOrCount.none))
@@ -114,12 +118,14 @@ g_dow_c.append(graph('source/destination MAC address pair', 'ISODOW', get_count_
 
 g_dow_b = []
 g_dow_b.append(graph('record byte sum', 'ISODOW', get_record, None, (('n', 'n'),), None, graph.SumOrCount.bcount))
+g_dow_b.append(graph('IP version', 'ISODOW', get_count_per, 'ip_version', ip_versions, None, graph.SumOrCount.bcount))
 g_dow_b.append(graph('IP protocol counts', 'ISODOW', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.bcount))
 g_dow_b.append(graph('destination port', 'ISODOW', get_count_per, 'dst_port', ports, '(ip_protocol = 6 OR ip_protocol = 17)', graph.SumOrCount.bcount))
 
 g_dom_c = []
 g_dom_c.append(graph('record count', 'DAY', get_record, None, (('n', 'n'),), None, graph.SumOrCount.none))
 g_dom_c.append(graph('unique IP address', 'DAY', get_unique_ip_count, None, ('IPv4', 'IPv6',), None, graph.SumOrCount.none))
+g_dom_c.append(graph('IP version', 'DAY', get_count_per, 'ip_version', ip_versions, None, graph.SumOrCount.none))
 g_dom_c.append(graph('IP protocol counts', 'DAY', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.none))
 g_dom_c.append(graph('destination port', 'DAY', get_count_per, 'dst_port', ports, None, graph.SumOrCount.none))
 g_dom_c.append(graph('source/destination IP address pair', 'DAY', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None, graph.SumOrCount.none))
@@ -127,12 +133,14 @@ g_dom_c.append(graph('source/destination MAC address pair', 'DAY', get_count_per
 
 g_dom_b = []
 g_dom_b.append(graph('record byte sum', 'DAY', get_record, None, (('n', 'n'),), None, graph.SumOrCount.bcount))
+g_dom_b.append(graph('IP version', 'DAY', get_count_per, 'ip_version', ip_versions, None, graph.SumOrCount.bcount))
 g_dom_b.append(graph('IP protocol counts', 'DAY', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.bcount))
 g_dom_b.append(graph('destination port', 'DAY', get_count_per, 'dst_port', ports, '(ip_protocol = 6 OR ip_protocol = 17)', graph.SumOrCount.bcount))
 
 g_month_c = []
 g_month_c.append(graph('record count', 'MONTH', get_record, None, (('n', 'n'),), None, graph.SumOrCount.none))
 g_month_c.append(graph('unique IP address', 'MONTH', get_unique_ip_count, None, ('IPv4', 'IPv6',), None, graph.SumOrCount.none))
+g_month_c.append(graph('IP version', 'MONTH', get_count_per, 'ip_version', ip_versions, None, graph.SumOrCount.none))
 g_month_c.append(graph('IP protocol counts', 'MONTH', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.none))
 g_month_c.append(graph('destination port', 'MONTH', get_count_per, 'dst_port', ports, None, graph.SumOrCount.none))
 g_month_c.append(graph('source/destination IP address pair', 'MONTH', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None, graph.SumOrCount.none))
@@ -140,6 +148,7 @@ g_month_c.append(graph('source/destination MAC address pair', 'MONTH', get_count
 
 g_month_b = []
 g_month_b.append(graph('record byte sum', 'MONTH', get_record, None, (('n', 'n'),), None, graph.SumOrCount.bcount))
+g_month_b.append(graph('IP version', 'MONTH', get_count_per, 'ip_version', ip_versions, None, graph.SumOrCount.bcount))
 g_month_b.append(graph('IP protocol counts', 'MONTH', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.bcount))
 g_month_b.append(graph('destination port', 'MONTH', get_count_per, 'dst_port', ports, '(ip_protocol = 6 OR ip_protocol = 17)', graph.SumOrCount.bcount))
 
