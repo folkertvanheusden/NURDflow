@@ -169,25 +169,25 @@ def create_byte_sum_sub_tabs():
                 with ui.row():
                     for g in g_hour_b:
                         g.begin()
-                ui.button('refresh', on_click=lambda: update(g_hour))
+                ui.button('refresh', on_click=lambda: update(g_hour_b))
 
             with ui.tab_panel(tabs_tb_two):
                 with ui.row():
                     for g in g_dow_b:
                         g.begin()
-                ui.button('refresh', on_click=lambda: update(g_hour))
+                ui.button('refresh', on_click=lambda: update(g_dow_b))
 
             with ui.tab_panel(tabs_tb_three):
                 with ui.row():
                     for g in g_dom_b:
                         g.begin()
-                ui.button('refresh', on_click=lambda: update(g_hour))
+                ui.button('refresh', on_click=lambda: update(g_dom_b))
 
             with ui.tab_panel(tabs_tb_four):
                 with ui.row():
                     for g in g_month_b:
                         g.begin()
-                ui.button('refresh', on_click=lambda: update(g_hour))
+                ui.button('refresh', on_click=lambda: update(g_month_b))
 
 def create_record_count_sub_tabs():
     with ui.column().classes('w-full'):
