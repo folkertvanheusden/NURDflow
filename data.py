@@ -7,142 +7,38 @@ def get_db_parameters():
 
 # ---
 
-def get_record_count_per_date():
+def get_record_count(group_by):
+    print(group_by)
     with psycopg2.connect(get_db_parameters()) as conn:
          with conn.cursor() as cur:
-             cur.execute('SELECT DATE(ts) AS d, COUNT(*) AS n FROM records GROUP BY d ORDER BY d ASC')
+             cur.execute('SELECT EXTRACT(' + group_by + ' FROM ts) AS dt, COUNT(*) AS n FROM records GROUP BY dt ORDER BY dt ASC')
              return cur.fetchall()
 
-def get_record_count_per_hour():
+def get_unique_ip_count(group_by):
     with psycopg2.connect(get_db_parameters()) as conn:
          with conn.cursor() as cur:
-             cur.execute('SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(*) AS n FROM records GROUP BY h ORDER BY h ASC')
+             cur.execute("SELECT EXTRACT(" + group_by + " FROM ts) AS dt, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS IPv4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS IPv6 FROM records GROUP BY dt ORDER BY dt ASC")
              return cur.fetchall()
 
-def get_record_count_per_day_of_week():
-    with psycopg2.connect(get_db_parameters()) as conn:
-         with conn.cursor() as cur:
-             cur.execute('SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(*) AS n FROM records GROUP BY dow ORDER BY dow ASC')
-             return cur.fetchall()
-
-def get_record_count_per_month_day():
-    with psycopg2.connect(get_db_parameters()) as conn:
-         with conn.cursor() as cur:
-             cur.execute('SELECT EXTRACT(DAY FROM ts) AS md, COUNT(*) AS n FROM records GROUP BY md ORDER BY md ASC')
-             return cur.fetchall()
-
-def get_record_count_per_month():
-    with psycopg2.connect(get_db_parameters()) as conn:
-         with conn.cursor() as cur:
-             cur.execute('SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(*) AS n FROM records GROUP BY m ORDER BY m ASC')
-             return cur.fetchall()
-
-# ---
-
-def get_unique_ip_count_per_hour():
-    with psycopg2.connect(get_db_parameters()) as conn:
-         with conn.cursor() as cur:
-             cur.execute("SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY h ORDER BY h ASC")
-             return cur.fetchall()
-
-def get_unique_ip_count_per_day_of_week():
-    with psycopg2.connect(get_db_parameters()) as conn:
-         with conn.cursor() as cur:
-             cur.execute("SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY dow ORDER BY dow ASC")
-             return cur.fetchall()
-
-def get_unique_ip_count_per_month_day():
-    with psycopg2.connect(get_db_parameters()) as conn:
-         with conn.cursor() as cur:
-             cur.execute("SELECT EXTRACT(DAY FROM ts) AS md, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY md ORDER BY md ASC")
-             return cur.fetchall()
-
-def get_unique_ip_count_per_month():
-    with psycopg2.connect(get_db_parameters()) as conn:
-         with conn.cursor() as cur:
-             cur.execute("SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS n4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS n6 FROM records GROUP BY m ORDER BY m ASC")
-             return cur.fetchall()
-
-# ---
-
-def get_count_per_port_per_hour(ports):
+def get_count_per(group_by, column, items, where):
+    values = tuple([v[0] for v in items])
+    w = 'AND ' + where if where != None else ''
+    qs = 'SELECT EXTRACT(' + group_by + ' FROM ts) AS dt, COUNT(*) AS n, ' + column + ' FROM records WHERE ' + column + ' IN %s GROUP BY dt, ' + column + ' UNION ALL SELECT EXTRACT(' + group_by + ' FROM ts) AS dt, COUNT(*) AS n, -1 AS ' + column + ' FROM records WHERE ' + column + ' NOT IN %s ' + w + ' GROUP BY dt ORDER BY dt ASC'
     with psycopg2.connect(get_db_parameters()) as conn:
         with conn.cursor() as cur:
-            cur.execute('''SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(*) AS n, dst_port FROM records WHERE dst_port IN %s GROUP BY h, dst_port UNION ALL
-            SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(*) AS n, -1 AS dst_port FROM records WHERE dst_port NOT IN %s GROUP BY h ORDER BY h ASC''', [ports, ports])
+            cur.execute(qs, tuple([values, values]))
             return cur.fetchall()
 
-def get_count_per_port_per_day_of_week(ports):
+def get_count_per_src_dst_address(group_by):
     with psycopg2.connect(get_db_parameters()) as conn:
         with conn.cursor() as cur:
-            cur.execute('''SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(*) AS n, dst_port FROM records WHERE dst_port IN %s GROUP BY dow, dst_port UNION ALL
-            SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(*) AS n, -1 AS dst_port FROM records WHERE dst_port NOT IN %s GROUP BY dow ORDER BY dow ASC''', [ports, ports])
+            cur.execute("SELECT EXTRACT(" + group_by + " FROM ts) AS dt, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY dt ORDER BY dt ASC")
             return cur.fetchall()
 
-def get_count_per_port_per_month_day(ports):
+def get_count_per_src_dst_mac_address(group_by):
     with psycopg2.connect(get_db_parameters()) as conn:
         with conn.cursor() as cur:
-            cur.execute('''SELECT EXTRACT(DAY FROM ts) AS d, COUNT(*) AS n, dst_port FROM records WHERE dst_port IN %s GROUP BY d, dst_port UNION ALL
-            SELECT EXTRACT(DAY FROM ts) AS d, COUNT(*) AS n, -1 AS dst_port FROM records WHERE dst_port NOT IN %s GROUP BY d ORDER BY d ASC''', [ports, ports])
-            return cur.fetchall()
-
-def get_count_per_port_per_month(ports):
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute('''SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(*) AS n, dst_port FROM records WHERE dst_port IN %s GROUP BY m, dst_port UNION ALL
-            SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(*) AS n, -1 AS dst_port FROM records WHERE dst_port NOT IN %s GROUP BY m ORDER BY m ASC''', [ports, ports])
-            return cur.fetchall()
-
-# ---
-
-def get_count_per_src_dst_address_per_hour():
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY h ORDER BY h ASC")
-            return cur.fetchall()
-
-def get_count_per_src_dst_address_per_day_of_week():
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY dow ORDER BY dow ASC")
-            return cur.fetchall()
-
-def get_count_per_src_dst_address_per_month_day():
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXTRACT(DAY FROM ts) AS md, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY md ORDER BY md ASC")
-            return cur.fetchall()
-
-def get_count_per_src_dst_address_per_month():
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY m ORDER BY m ASC")
-            return cur.fetchall()
-
-# ---
-
-def get_count_per_src_dst_mac_address_per_hour():
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(DISTINCT(miscellaneous->'sourceMacAddress', destination_address->'postDestinationMacAddress')) AS n FROM records GROUP BY h ORDER BY h ASC")
-            return cur.fetchall()
-
-def get_count_per_src_dst_mac_address_per_day_of_week():
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(DISTINCT(miscellaneous->'sourceMacAddress', destination_address->'postDestinationMacAddress')) AS n FROM records GROUP BY dow ORDER BY dow ASC")
-            return cur.fetchall()
-
-def get_count_per_src_dst_mac_address_per_month_day():
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXTRACT(DAY FROM ts) AS md, COUNT(DISTINCT(miscellaneous->'sourceMacAddress', destination_address->'postDestinationMacAddress')) AS n FROM records GROUP BY md ORDER BY md ASC")
-            return cur.fetchall()
-
-def get_count_per_src_dst_mac_address_per_month():
-    with psycopg2.connect(get_db_parameters()) as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(DISTINCT(miscellaneous->'sourceMacAddress', destination_address->'postDestinationMacAddress')) AS n FROM records GROUP BY m ORDER BY m ASC")
+            cur.execute("SELECT EXTRACT(" + group_by + " FROM ts) AS dt, COUNT(DISTINCT(miscellaneous->'sourceMacAddress', destination_address->'postDestinationMacAddress')) AS n FROM records GROUP BY dt ORDER BY dt ASC")
             return cur.fetchall()
 
 # ---
