@@ -89,6 +89,32 @@ def get_count_per_port_per_month(ports):
             cur.execute('SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(*) AS n, dst_port AS d FROM records WHERE dst_port IN %s GROUP BY m, dst_port ORDER BY m ASC', [ports])
             return cur.fetchall()
 
+# ---
+
+def get_count_per_src_dst_address_per_hour():
+    with psycopg2.connect(get_db_parameters()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT EXTRACT(HOUR FROM ts) AS h, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY h ORDER BY h ASC")
+            return cur.fetchall()
+
+def get_count_per_src_dst_address_per_day_of_week():
+    with psycopg2.connect(get_db_parameters()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT EXTRACT(ISODOW FROM ts) AS dow, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY dow ORDER BY dow ASC")
+            return cur.fetchall()
+
+def get_count_per_src_dst_address_per_month_day():
+    with psycopg2.connect(get_db_parameters()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT EXTRACT(DAY FROM ts) AS md, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY md ORDER BY md ASC")
+            return cur.fetchall()
+
+def get_count_per_src_dst_address_per_month():
+    with psycopg2.connect(get_db_parameters()) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT EXTRACT(MONTH FROM ts) AS m, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY m ORDER BY m ASC")
+            return cur.fetchall()
+
 if __name__ == "__main__":
     print(get_record_count_per_date())
     print(get_record_count_per_hour())
@@ -101,4 +127,10 @@ if __name__ == "__main__":
 
     print(get_count_per_port_per_hour((80, 443, 5900)))
     print(get_count_per_port_per_day_of_week((80, 443, 5900)))
+    print(get_count_per_port_per_month_day((80, 443, 5900)))
     print(get_count_per_port_per_month((80, 443, 5900)))
+
+    print(get_count_per_src_dst_address_per_hour())
+    print(get_count_per_src_dst_address_per_day_of_week())
+    print(get_count_per_src_dst_address_per_month_day())
+    print(get_count_per_src_dst_address_per_month())

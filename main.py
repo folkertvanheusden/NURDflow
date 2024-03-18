@@ -93,26 +93,30 @@ with ui.column():
         ports = (80, 443, 5900, 123)
         with ui.tab_panel(tabs_t_one):
             with ui.row():
-                create_fig_card(get_record_count_per_hour(), 'records per hour', False)
-                create_fig_card(get_unique_ip_count_per_hour(), 'unique IP4/6 addresses per hour', True)
+                create_fig_card(get_record_count_per_hour(), 'records', False)
+                create_fig_card(get_unique_ip_count_per_hour(), 'unique IP4/6 addresses', True)
                 create_fig_card_per(get_count_per_port_per_hour(ports), 'count per dst-port', ports)
+                create_fig_card(get_count_per_src_dst_address_per_hour(), 'source/destination IP address pairs', True)
 
         with ui.tab_panel(tabs_t_two):
             with ui.row():
-                create_fig_card(get_record_count_per_day_of_week(), 'records per day-of-week', False)
-                create_fig_card(get_unique_ip_count_per_day_of_week(), 'unique IP4/6 addresses per day-of-week', True)
+                create_fig_card(get_record_count_per_day_of_week(), 'records', False)
+                create_fig_card(get_unique_ip_count_per_day_of_week(), 'unique IP4/6 addresses', True)
                 create_fig_card_per(get_count_per_port_per_day_of_week(ports), 'count per dst-port', ports)
+                create_fig_card(get_count_per_src_dst_address_per_day_of_week(), 'source/destination IP address pairs', True)
 
         with ui.tab_panel(tabs_t_three):
             with ui.row():
-                create_fig_card(get_record_count_per_month_day(), 'records per day of the month', False)
-                create_fig_card(get_unique_ip_count_per_month_day(), 'unique IP4/6 addr per day of the month', True)
+                create_fig_card(get_record_count_per_month_day(), 'records', False)
+                create_fig_card(get_unique_ip_count_per_month_day(), 'unique IP4/6 addresses', True)
                 create_fig_card_per(get_count_per_port_per_month_day(ports), 'count per dst-port', ports)
+                create_fig_card(get_count_per_src_dst_address_per_month_day(), 'source/destination IP address pairs', True)
 
         with ui.tab_panel(tabs_t_four):
             with ui.row():
-                create_fig_card(get_record_count_per_month(), 'records per month', False)
-                create_fig_card(get_unique_ip_count_per_month(), 'unique IP4/6 addr per month', True)
+                create_fig_card(get_record_count_per_month(), 'records', False)
+                create_fig_card(get_unique_ip_count_per_month(), 'unique IP4/6 addr', True)
                 create_fig_card_per(get_count_per_port_per_month(ports), 'count per dst-port', ports)
+                create_fig_card(get_count_per_src_dst_address_per_month(), 'source/destination IP address pairs', True)
 
 ui.run(show=False)
