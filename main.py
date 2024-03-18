@@ -1,91 +1,120 @@
 #! /usr/bin/python3
 
 import copy
-from data import *
+from data import get_record_count, get_unique_ip_count, get_count_per, get_count_per_src_dst_address, get_count_per_src_dst_mac_address
 from nicegui import ui
 
-def create_fig_card(data, title, ip):
-    fig_template = {
-        'data': [
-            {
-                'type': 'scatter',
-                'name': '',
-                'x': [],
-                'y': [],
-            }
-        ],
-        'layout': {
-            'margin': {'l': 30, 'r': 0, 't': 0, 'b': 15},
-            'plot_bgcolor': '#E5ECF6',
-            'xaxis': {'gridcolor': 'white'},
-            'yaxis': {'gridcolor': 'white'},
-        },
-    }
+class graph:
+    def __init__(self, title, group_by, data_function, column, items, where):
+        self.title = title
+        self.group_by = group_by
+        self.data_function = data_function
+        self.column = column
+        self.items = items
+        self.where = where
 
-    fig = copy.deepcopy(fig_template)
+        fig_template = {
+            'data': [
+            ],
+            'layout': {
+                'margin': {'l': 30, 'r': 0, 't': 0, 'b': 15},
+                'plot_bgcolor': '#E5ECF6',
+                'xaxis': {'gridcolor': 'white'},
+                'yaxis': {'gridcolor': 'white'},
+            },
+        }
 
-    if ip:
-        fig['data'][0]['name'] = 'IPv4'
-        fig['data'].append({
-                'type': 'scatter',
-                'name': 'IPv6',
-                'x': [],
-                'y': [],
-            })
+        self.fig = copy.deepcopy(fig_template)
 
-    for item in data:
-        fig['data'][0]['x'].append(item[0])
-        fig['data'][0]['y'].append(item[1])
-        if ip:
-            fig['data'][1]['x'].append(item[0])
-            fig['data'][1]['y'].append(item[2])
+        for i in self.items:
+            self.fig['data'].append({
+                    'type': 'scatter',
+                    'name': i[1],
+                    'x': [],
+                    'y': [],
+                })
 
-    with ui.card():
-        ui.label(title)
-        ui.plotly(fig).classes('w-100 h-80')
+        if self.column:
+            self.fig['data'].append({
+                    'type': 'scatter',
+                    'name': 'other',
+                    'x': [],
+                    'y': [],
+                })
 
-def create_fig_card_per(data, title, items):
-    fig_template = {
-        'data': [
-        ],
-        'layout': {
-            'margin': {'l': 30, 'r': 0, 't': 0, 'b': 15},
-            'plot_bgcolor': '#E5ECF6',
-            'xaxis': {'gridcolor': 'white'},
-            'yaxis': {'gridcolor': 'white'},
-        },
-    }
+    def begin(self):
+        with ui.card():
+            ui.label(self.title)
+            plot = ui.plotly(self.fig).classes('w-100 h-80')
 
-    fig = copy.deepcopy(fig_template)
+        self.plot = plot
+        self.update()
 
-    for item in items:
-        fig['data'].append({
-                'type': 'scatter',
-                'name': item,
-                'x': [],
-                'y': [],
-            })
-
-    fig['data'].append({
-            'type': 'scatter',
-            'name': 'others',
-            'x': [],
-            'y': [],
-        })
-
-    for item in data:
-        if item[2] in items:
-            nr = items.index(item[2])
+    @ui.refreshable
+    def update(self):
+        item_names = [v[0] for v in self.items]
+        for iy in range(len(self.items)):
+            self.fig['data'][iy]['x'].clear()
+            self.fig['data'][iy]['y'].clear()
+        if self.column:
+            self.fig['data'][-1]['x'].clear()
+            self.fig['data'][-1]['y'].clear()
+            data = self.data_function(self.group_by, self.column, self.items, self.where)
+            for item in data:
+                if item[2] in item_names:
+                    nr = item_names.index(item[2])
+                else:
+                    nr = -1
+                self.fig['data'][nr]['x'].append(item[0])
+                self.fig['data'][nr]['y'].append(item[1])
         else:
-            nr = -1
-        fig['data'][nr]['x'].append(item[0])
-        fig['data'][nr]['y'].append(item[1])
+            data = self.data_function(self.group_by)
+            for iy in range(len(self.items)):
+                for item in data:
+                    self.fig['data'][iy]['x'].append(item[0])
+                    self.fig['data'][iy]['y'].append(item[1 + iy])
+        self.plot.update()
 
-    with ui.card():
-        ui.label(title)
-        ui.plotly(fig).classes('w-100 h-80')
+ports = ((80, 'HTTP'), (443, 'HTTPS'), (5900, 'VNC'), (123, 'NTP'))
+ip_protocols = ((1, 'ICMP'), (6, 'TCP'), (17, 'UDP'))
 
-with ui.column():
+g_hour = []
+g_hour.append(graph('record count', 'HOUR', get_record_count, None, (('n', 'n'),), None))
+g_hour.append(graph('unique IP address', 'HOUR', get_unique_ip_count, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None))
+g_hour.append(graph('IP protocol counts', 'HOUR', get_count_per, 'ip_protocol', ip_protocols, None))
+g_hour.append(graph('destination port', 'HOUR', get_count_per, 'dst_port', ports, '(ip_protocol = 6 OR ip_protocol = 17)'))
+g_hour.append(graph('source/destination IP address pair', 'HOUR', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None))
+g_hour.append(graph('source/destination MAC address pair', 'HOUR', get_count_per_src_dst_mac_address, None, (('n', 'n'),), None))
+
+g_dow = []
+g_dow.append(graph('record count', 'ISODOW', get_record_count, None, (('n', 'n'),), None))
+g_dow.append(graph('unique IP address', 'ISODOW', get_unique_ip_count, None, ('IPv4', 'IPv6',), None))
+g_dow.append(graph('IP protocol counts', 'ISODOW', get_count_per, 'ip_protocol', ip_protocols, None))
+g_dow.append(graph('destination port', 'ISODOW', get_count_per, 'dst_port', ports, None))
+g_dow.append(graph('source/destination IP address pair', 'ISODOW', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None))
+g_dow.append(graph('source/destination MAC address pair', 'ISODOW', get_count_per_src_dst_mac_address, None, (('n', 'n'),), None))
+
+g_dom = []
+g_dom.append(graph('record count', 'DAY', get_record_count, None, (('n', 'n'),), None))
+g_dom.append(graph('unique IP address', 'DAY', get_unique_ip_count, None, ('IPv4', 'IPv6',), None))
+g_dow.append(graph('IP protocol counts', 'DAY', get_count_per, 'ip_protocol', ip_protocols, None))
+g_dom.append(graph('destination port', 'DAY', get_count_per, 'dst_port', ports, None))
+g_dom.append(graph('source/destination IP address pair', 'DAY', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None))
+g_dom.append(graph('source/destination MAC address pair', 'DAY', get_count_per_src_dst_mac_address, None, (('n', 'n'),), None))
+
+g_month = []
+g_month.append(graph('record count', 'MONTH', get_record_count, None, (('n', 'n'),), None))
+g_month.append(graph('unique IP address', 'MONTH', get_unique_ip_count, None, ('IPv4', 'IPv6',), None))
+g_month.append(graph('IP protocol counts', 'MONTH', get_count_per, 'ip_protocol', ip_protocols, None))
+g_month.append(graph('destination port', 'MONTH', get_count_per, 'dst_port', ports, None))
+g_month.append(graph('source/destination IP address pair', 'MONTH', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None))
+g_month.append(graph('source/destination MAC address pair', 'MONTH', get_count_per_src_dst_mac_address, None, (('n', 'n'),), None))
+
+def update(graphs):
+    for g in graphs:
+        g.update()
+
+with ui.column().classes('w-full'):
     dark = ui.dark_mode()
 
     with ui.row():
@@ -96,46 +125,32 @@ with ui.column():
     with ui.tabs().classes('w-full') as tabs_t:
         tabs_t_one = ui.tab('per hour')
         tabs_t_two = ui.tab('per day-of-week')
-        tabs_t_three = ui.tab('per day-of-the-month')
+        tabs_t_three = ui.tab('per day of the month')
         tabs_t_four = ui.tab('per month')
 
     with ui.tab_panels(tabs_t, value=tabs_t_one).classes('w-full'):
-        ports = (80, 443, 5900, 123)
-        ip_protocols = (1, 6, 17)
         with ui.tab_panel(tabs_t_one):
             with ui.row():
-                create_fig_card(get_record_count_per_hour(), 'records', False)
-                create_fig_card(get_unique_ip_count_per_hour(), 'unique IP4/6 addresses', True)
-                create_fig_card_per(get_count_per_port_per_hour(ports), 'count per dst-port', ports)
-                create_fig_card(get_count_per_src_dst_address_per_hour(), 'source/destination IP address pairs', True)
-                create_fig_card(get_count_per_src_dst_mac_address_per_hour(), 'source/destination MAC address pairs', False)
-                create_fig_card_per(get_ip_protocol_count_per_hour(ip_protocols), 'IP protocol', ip_protocols)
+                for g in g_hour:
+                    g.begin()
+            ui.button('refresh', on_click=lambda: update(g_hour))
 
         with ui.tab_panel(tabs_t_two):
             with ui.row():
-                create_fig_card(get_record_count_per_day_of_week(), 'records', False)
-                create_fig_card(get_unique_ip_count_per_day_of_week(), 'unique IP4/6 addresses', True)
-                create_fig_card_per(get_count_per_port_per_day_of_week(ports), 'count per dst-port', ports)
-                create_fig_card(get_count_per_src_dst_address_per_day_of_week(), 'source/destination IP address pairs', True)
-                create_fig_card(get_count_per_src_dst_mac_address_per_day_of_week(), 'source/destination MAC address pairs', False)
-                create_fig_card_per(get_ip_protocol_count_per_day_of_week(ip_protocols), 'IP protocol', ip_protocols)
+                for g in g_dow:
+                    g.begin()
+            ui.button('refresh', on_click=lambda: update(g_dow))
 
         with ui.tab_panel(tabs_t_three):
             with ui.row():
-                create_fig_card(get_record_count_per_month_day(), 'records', False)
-                create_fig_card(get_unique_ip_count_per_month_day(), 'unique IP4/6 addresses', True)
-                create_fig_card_per(get_count_per_port_per_month_day(ports), 'count per dst-port', ports)
-                create_fig_card(get_count_per_src_dst_address_per_month_day(), 'source/destination IP address pairs', True)
-                create_fig_card(get_count_per_src_dst_mac_address_per_month_day(), 'source/destination MAC address pairs', False)
-                create_fig_card_per(get_ip_protocol_count_per_month_day(ip_protocols), 'IP protocol', ip_protocols)
+                for g in g_dom:
+                    g.begin()
+            ui.button('refresh', on_click=lambda: update(g_dom))
 
         with ui.tab_panel(tabs_t_four):
             with ui.row():
-                create_fig_card(get_record_count_per_month(), 'records', False)
-                create_fig_card(get_unique_ip_count_per_month(), 'unique IP4/6 addr', True)
-                create_fig_card_per(get_count_per_port_per_month(ports), 'count per dst-port', ports)
-                create_fig_card(get_count_per_src_dst_address_per_month(), 'source/destination IP address pairs', True)
-                create_fig_card(get_count_per_src_dst_mac_address_per_month(), 'source/destination MAC address pairs', False)
-                create_fig_card_per(get_ip_protocol_count_per_month(ip_protocols), 'IP protocol', ip_protocols)
+                for g in g_month:
+                    g.begin()
+            ui.button('refresh', on_click=lambda: update(g_month))
 
 ui.run(show=False)
