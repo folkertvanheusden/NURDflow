@@ -97,6 +97,7 @@ with ui.column():
                 create_fig_card(get_unique_ip_count_per_hour(), 'unique IP4/6 addresses', True)
                 create_fig_card_per(get_count_per_port_per_hour(ports), 'count per dst-port', ports)
                 create_fig_card(get_count_per_src_dst_address_per_hour(), 'source/destination IP address pairs', True)
+                create_fig_card(get_count_per_src_dst_mac_address_per_hour(), 'source/destination MAC address pairs', False)
 
         with ui.tab_panel(tabs_t_two):
             with ui.row():
@@ -104,6 +105,7 @@ with ui.column():
                 create_fig_card(get_unique_ip_count_per_day_of_week(), 'unique IP4/6 addresses', True)
                 create_fig_card_per(get_count_per_port_per_day_of_week(ports), 'count per dst-port', ports)
                 create_fig_card(get_count_per_src_dst_address_per_day_of_week(), 'source/destination IP address pairs', True)
+                create_fig_card(get_count_per_src_dst_mac_address_per_day_of_week(), 'source/destination MAC address pairs', False)
 
         with ui.tab_panel(tabs_t_three):
             with ui.row():
@@ -111,6 +113,7 @@ with ui.column():
                 create_fig_card(get_unique_ip_count_per_month_day(), 'unique IP4/6 addresses', True)
                 create_fig_card_per(get_count_per_port_per_month_day(ports), 'count per dst-port', ports)
                 create_fig_card(get_count_per_src_dst_address_per_month_day(), 'source/destination IP address pairs', True)
+                create_fig_card(get_count_per_src_dst_mac_address_per_month_day(), 'source/destination MAC address pairs', False)
 
         with ui.tab_panel(tabs_t_four):
             with ui.row():
@@ -118,5 +121,6 @@ with ui.column():
                 create_fig_card(get_unique_ip_count_per_month(), 'unique IP4/6 addr', True)
                 create_fig_card_per(get_count_per_port_per_month(ports), 'count per dst-port', ports)
                 create_fig_card(get_count_per_src_dst_address_per_month(), 'source/destination IP address pairs', True)
+                create_fig_card(get_count_per_src_dst_mac_address_per_month(), 'source/destination MAC address pairs', False)
 
 ui.run(show=False)
