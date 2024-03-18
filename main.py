@@ -113,7 +113,7 @@ g_dow.append(graph('source/destination MAC address pair', 'ISODOW', get_count_pe
 g_dom = []
 g_dom.append(graph('record count', 'DAY', get_record, None, (('n', 'n'),), None, graph.SumOrCount.none))
 g_dom.append(graph('unique IP address', 'DAY', get_unique_ip_count, None, ('IPv4', 'IPv6',), None, graph.SumOrCount.none))
-g_dow.append(graph('IP protocol counts', 'DAY', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.none))
+g_dom.append(graph('IP protocol counts', 'DAY', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.none))
 g_dom.append(graph('destination port', 'DAY', get_count_per, 'dst_port', ports, None, graph.SumOrCount.none))
 g_dom.append(graph('source/destination IP address pair', 'DAY', get_count_per_src_dst_address, None, (('IP4', 'IPv4'), ('IP6', 'IPv6')), None, graph.SumOrCount.none))
 g_dom.append(graph('source/destination MAC address pair', 'DAY', get_count_per_src_dst_mac_address, None, (('n', 'n'),), None, graph.SumOrCount.none))
