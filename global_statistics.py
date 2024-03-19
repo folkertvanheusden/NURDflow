@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import asyncio
+import asyncpg
 import copy
 from data import get_record, get_unique_ip_count, get_count_per, get_count_per_src_dst_address, get_count_per_src_dst_mac_address, get_heatmap_data, get_flow_duration_groups
 from enum import Enum
