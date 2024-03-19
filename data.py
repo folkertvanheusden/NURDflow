@@ -58,4 +58,4 @@ def get_flow_duration_groups(n_values):
         row = cur.fetchone()
         divider = row[0] / n_values
         cur.execute(f'SELECT ROUND(AVG(flow_end_time - flow_start_time) / 1000) AS duration, COUNT(*) AS n FROM records WHERE ip_protocol=6 GROUP BY FLOOR((flow_end_time - flow_start_time) / {divider}) ORDER BY duration ASC')
-        return divider, row[0], cur.fetchall()
+        return cur.fetchall()

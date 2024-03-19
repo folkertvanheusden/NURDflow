@@ -49,16 +49,16 @@ class graph:
                     'y': [],
                 })
 
-    def begin(self):
+    async def begin(self):
         with ui.card().classes('w-100 h-80'):
             ui.label(self.title)
             plot = ui.plotly(self.fig).classes('w-100 h-80')
 
         self.plot = plot
-        self.update()
+        await self.update()
 
     @ui.refreshable
-    def update(self):
+    async def update(self):
         item_names = [v[0] for v in self.items]
         for iy in range(len(self.items)):
             self.fig['data'][iy]['x'].clear()
@@ -101,14 +101,14 @@ class heatmap:
         self.group_by_x = group_by_x
         self.sum_bytes = sum_bytes
 
-    def begin(self):
+    async def begin(self):
         with ui.card():
             g = ui.grid(columns=1)
         self.grid = g
-        self.update()
+        await self.update()
 
     @ui.refreshable
-    def update(self):
+    async def update(self):
         data = get_heatmap_data(self.group_by_y, self.group_by_x, self.sum_bytes)
 
         highest = 0
@@ -157,14 +157,14 @@ class bar_chart:
 
         self.fig = copy.deepcopy(fig_template)
 
-    def begin(self):
+    async def begin(self):
         with ui.card():
             self.plot = ui.highchart(self.fig).classes('w-150 h-150')
-        self.update()
+        await self.update()
 
     @ui.refreshable
-    def update(self):
-        divider, max_, data = self.data_getter(40)
+    async def update(self):
+        data = self.data_getter(40)
 
         self.fig['xAxis']['categories'].clear()
         for item in data:
@@ -247,11 +247,11 @@ g_heatmap_b.append(heatmap(7, 'ISODOW', 24, 'HOUR', graph.SumOrCount.bcount))
 g_heatmap_c = []
 g_heatmap_c.append(heatmap(7, 'ISODOW', 24, 'HOUR', graph.SumOrCount.ncount))
 
-def update(graphs):
+async def update(graphs):
     for g in graphs:
         g.update()
 
-def create_byte_sum_sub_tabs():
+async def create_byte_sum_sub_tabs():
     with ui.column().classes('w-full'):
         with ui.tabs().classes('w-full') as tabs_tb:
             tabs_tb_one = ui.tab('per hour')
@@ -264,34 +264,34 @@ def create_byte_sum_sub_tabs():
             with ui.tab_panel(tabs_tb_one):
                 with ui.row():
                     for g in g_hour_b:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_hour_b))
 
             with ui.tab_panel(tabs_tb_two):
                 with ui.row():
                     for g in g_dow_b:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_dow_b))
 
             with ui.tab_panel(tabs_tb_three):
                 with ui.row():
                     for g in g_dom_b:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_dom_b))
 
             with ui.tab_panel(tabs_tb_four):
                 with ui.row():
                     for g in g_month_b:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_month_b))
 
             with ui.tab_panel(tabs_tb_five):
                 with ui.row():
                     for g in g_heatmap_b:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_heatmap_b))
 
-def create_record_count_sub_tabs():
+async def create_record_count_sub_tabs():
     with ui.column().classes('w-full'):
         with ui.tabs().classes('w-full') as tabs_tc:
             tabs_tc_one = ui.tab('per hour')
@@ -304,38 +304,38 @@ def create_record_count_sub_tabs():
             with ui.tab_panel(tabs_tc_one):
                 with ui.row():
                     for g in g_hour_c:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_hour))
 
             with ui.tab_panel(tabs_tc_two):
                 with ui.row():
                     for g in g_dow_c:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_dow))
 
             with ui.tab_panel(tabs_tc_three):
                 with ui.row():
                     for g in g_dom_c:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_dom))
 
             with ui.tab_panel(tabs_tc_four):
                 with ui.row():
                     for g in g_month_c:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_month))
 
             with ui.tab_panel(tabs_tc_five):
                 with ui.row():
                     for g in g_heatmap_c:
-                        g.begin()
+                        await g.begin()
                 ui.button('refresh', on_click=lambda: update(g_heatmap_c))
 
 g_misc = []
 g_misc.append(bar_chart('number of records per flow-duration interval', get_flow_duration_groups))
 
 @ui.page('/global-statistics')
-def global_statistics():
+async def global_statistics():
     with ui.header(elevated=True).style('background-color: #3874c8').classes('items-center justify-between'):
         with ui.row():
             ui.label('NURDflow').style('font-size: max(10pt, 3vh)')
@@ -356,13 +356,13 @@ def global_statistics():
 
             with ui.tab_panels(tabs_main, value=tabs_main_bytes).classes('w-full'):
                 with ui.tab_panel(tabs_main_bytes):
-                    create_byte_sum_sub_tabs()
+                    await create_byte_sum_sub_tabs()
 
                 with ui.tab_panel(tabs_main_count):
-                    create_record_count_sub_tabs()
+                    await create_record_count_sub_tabs()
 
                 with ui.tab_panel(tabs_main_misc):
                     with ui.row():
                         for g in g_misc:
-                            g.begin()
+                            await g.begin()
                     ui.button('refresh', on_click=lambda: update(g_misc))
