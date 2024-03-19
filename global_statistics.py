@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 import copy
-from data import get_record, get_unique_ip_count, get_count_per, get_count_per_src_dst_address, get_count_per_src_dst_mac_address
+from data import get_record, get_unique_ip_count, get_count_per, get_count_per_src_dst_address, get_count_per_src_dst_mac_address, get_heatmap_data
 from enum import Enum
 from nicegui import ui
 
@@ -88,6 +88,52 @@ class graph:
                     self.fig['data'][iy]['y'].append(item[1 + iy])
         self.plot.update()
 
+class heatmap:
+    class SumOrCount(Enum):
+        bcount = True
+        ncount = False
+        none   = False
+
+    def __init__(self, height, group_by_y, width, group_by_x, sum_bytes: SumOrCount):
+        self.height = height
+        self.group_by_y = group_by_y
+        self.width = width
+        self.group_by_x = group_by_x
+        self.sum_bytes = sum_bytes
+
+    def begin(self):
+        g = ui.grid(columns=1)
+        self.grid = g
+        self.update()
+
+    @ui.refreshable
+    def update(self):
+        data = get_heatmap_data(self.group_by_y, self.group_by_x, self.sum_bytes)
+
+        w = 0
+        h = 0
+        highest = 0
+        for element in data:
+            highest = max(highest, element[2])
+            w = max(w, element[1])
+            h = max(h, element[0])
+
+        x_mul = 20
+        y_mul = 20
+
+        svg = f'<svg viewBox="0 0 {w * x_mul} {h * y_mul}" width="{w * x_mul}" height="{h * y_mul}" xmlns="http://www.w3.org/2000/svg">\n'
+        for element in data:
+            p = element[2] / highest
+            r = 255 * p
+            g = 255 - r
+            b = 0
+            svg += f'<rect width="{x_mul}" height="{y_mul}" x="{element[1] * x_mul}" y="{element[0] * y_mul}" fill="#{int(r):02x}{int(g):02x}{int(b):02x}" />\n'
+        svg += '</svg>'
+
+        with self.grid:
+            self.grid.clear()
+            ui.html(svg)
+
 ports = ((80, 'HTTP'), (443, 'HTTPS'), (5900, 'VNC'), (123, 'NTP'))
 ip_versions = ((4, 'IPv4'), (6, 'IPv6'))
 ip_protocols = ((1, 'ICMP'), (6, 'TCP'), (17, 'UDP'))
@@ -152,6 +198,12 @@ g_month_b.append(graph('IP version', 'MONTH', get_count_per, 'ip_version', ip_ve
 g_month_b.append(graph('IP protocol counts', 'MONTH', get_count_per, 'ip_protocol', ip_protocols, None, graph.SumOrCount.bcount))
 g_month_b.append(graph('destination port', 'MONTH', get_count_per, 'dst_port', ports, '(ip_protocol = 6 OR ip_protocol = 17)', graph.SumOrCount.bcount))
 
+g_heatmap_b = []
+g_heatmap_b.append(heatmap(7, 'ISODOW', 24, 'HOUR', graph.SumOrCount.bcount))
+
+g_heatmap_c = []
+g_heatmap_c.append(heatmap(7, 'ISODOW', 24, 'HOUR', graph.SumOrCount.ncount))
+
 def update(graphs):
     for g in graphs:
         g.update()
@@ -163,6 +215,7 @@ def create_byte_sum_sub_tabs():
             tabs_tb_two = ui.tab('per day-of-week')
             tabs_tb_three = ui.tab('per day of the month')
             tabs_tb_four = ui.tab('per month')
+            tabs_tb_five = ui.tab('heatmap')
 
         with ui.tab_panels(tabs_tb, value=tabs_tb_one).classes('w-full'):
             with ui.tab_panel(tabs_tb_one):
@@ -189,6 +242,12 @@ def create_byte_sum_sub_tabs():
                         g.begin()
                 ui.button('refresh', on_click=lambda: update(g_month_b))
 
+            with ui.tab_panel(tabs_tb_five):
+                with ui.row():
+                    for g in g_heatmap_b:
+                        g.begin()
+                ui.button('refresh', on_click=lambda: update(g_heatmap_b))
+
 def create_record_count_sub_tabs():
     with ui.column().classes('w-full'):
         with ui.tabs().classes('w-full') as tabs_tc:
@@ -196,6 +255,7 @@ def create_record_count_sub_tabs():
             tabs_tc_two = ui.tab('per day-of-week')
             tabs_tc_three = ui.tab('per day of the month')
             tabs_tc_four = ui.tab('per month')
+            tabs_tc_five = ui.tab('heatmap')
 
         with ui.tab_panels(tabs_tc, value=tabs_tc_one).classes('w-full'):
             with ui.tab_panel(tabs_tc_one):
@@ -221,6 +281,12 @@ def create_record_count_sub_tabs():
                     for g in g_month_c:
                         g.begin()
                 ui.button('refresh', on_click=lambda: update(g_month))
+
+            with ui.tab_panel(tabs_tc_five):
+                with ui.row():
+                    for g in g_heatmap_c:
+                        g.begin()
+                ui.button('refresh', on_click=lambda: update(g_heatmap_c))
 
 @ui.page('/global-statistics')
 def global_statistics():

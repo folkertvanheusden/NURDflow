@@ -43,3 +43,11 @@ def get_count_per_src_dst_mac_address(group_by, sum_):
     with conn.cursor() as cur:
         cur.execute("SELECT EXTRACT(" + group_by + " FROM ts) AS dt, COUNT(DISTINCT(miscellaneous->'sourceMacAddress', destination_address->'postDestinationMacAddress')) AS n FROM records GROUP BY dt ORDER BY dt ASC")
         return cur.fetchall()
+
+def get_heatmap_data(gb_y, gb_x, sum_):
+    with conn.cursor() as cur:
+        if sum_:
+            cur.execute("SELECT EXTRACT(" + gb_y + " FROM ts) AS dty, EXTRACT(" + gb_x + " FROM ts) AS dtx, SUM(n_bytes) AS n FROM records GROUP BY dty, dtx ORDER BY dty, dtx ASC")
+        else:
+            cur.execute("SELECT EXTRACT(" + gb_y + " FROM ts) AS dty, EXTRACT(" + gb_x + " FROM ts) AS dtx, COUNT(*) AS n FROM records GROUP BY dty, dtx ORDER BY dty, dtx ASC")
+        return cur.fetchall()
