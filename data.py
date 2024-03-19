@@ -51,3 +51,11 @@ def get_heatmap_data(gb_y, gb_x, sum_):
         else:
             cur.execute("SELECT EXTRACT(" + gb_y + " FROM ts) AS dty, EXTRACT(" + gb_x + " FROM ts) AS dtx, COUNT(*) AS n FROM records GROUP BY dty, dtx ORDER BY dty, dtx ASC")
         return cur.fetchall()
+
+def get_flow_duration_groups(n_values):
+    with conn.cursor() as cur:
+        cur.execute('SELECT MAX(flow_end_time - flow_start_time) AS max FROM records WHERE ip_protocol=6')
+        row = cur.fetchone()
+        divider = row[0] / n_values
+        cur.execute(f'SELECT ROUND(AVG(flow_end_time - flow_start_time) / 1000) AS duration, COUNT(*) AS n FROM records WHERE ip_protocol=6 GROUP BY FLOOR((flow_end_time - flow_start_time) / {divider}) ORDER BY duration ASC')
+        return divider, row[0], cur.fetchall()

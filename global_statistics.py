@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 
 import copy
-from data import get_record, get_unique_ip_count, get_count_per, get_count_per_src_dst_address, get_count_per_src_dst_mac_address, get_heatmap_data
+from data import get_record, get_unique_ip_count, get_count_per, get_count_per_src_dst_address, get_count_per_src_dst_mac_address, get_heatmap_data, get_flow_duration_groups
 from enum import Enum
 from nicegui import ui
 
@@ -50,7 +50,7 @@ class graph:
                 })
 
     def begin(self):
-        with ui.card():
+        with ui.card().classes('w-100 h-80'):
             ui.label(self.title)
             plot = ui.plotly(self.fig).classes('w-100 h-80')
 
@@ -102,7 +102,8 @@ class heatmap:
         self.sum_bytes = sum_bytes
 
     def begin(self):
-        g = ui.grid(columns=1)
+        with ui.card():
+            g = ui.grid(columns=1)
         self.grid = g
         self.update()
 
@@ -139,6 +140,42 @@ class heatmap:
         with self.grid:
             self.grid.clear()
             ui.html(svg)
+
+class bar_chart:
+    def __init__(self, title, data_getter):
+        self.data_getter = data_getter
+
+        fig_template = {
+            'title': title,
+            'chart': {'type': 'column'},
+            'xAxis': {'categories': []},
+            'yAxis': {'name': 'count'},
+            'series': [
+                {'name': 'duration-count', 'data': []},
+            ],
+        }
+
+        self.fig = copy.deepcopy(fig_template)
+
+    def begin(self):
+        with ui.card():
+            self.plot = ui.highchart(self.fig).classes('w-150 h-150')
+        self.update()
+
+    @ui.refreshable
+    def update(self):
+        divider, max_, data = self.data_getter(40)
+
+        self.fig['xAxis']['categories'].clear()
+        for item in data:
+            self.fig['xAxis']['categories'].append(item[0])
+
+        self.fig['series'][0]['data'].clear()
+        for item in data:
+            self.fig['series'][0]['data'].append(item[1])
+
+        self.plot.update()
+
 
 ports = ((80, 'HTTP'), (443, 'HTTPS'), (5900, 'VNC'), (123, 'NTP'))
 ip_versions = ((4, 'IPv4'), (6, 'IPv6'))
@@ -294,6 +331,9 @@ def create_record_count_sub_tabs():
                         g.begin()
                 ui.button('refresh', on_click=lambda: update(g_heatmap_c))
 
+g_misc = []
+g_misc.append(bar_chart('number of records per flow-duration interval', get_flow_duration_groups))
+
 @ui.page('/global-statistics')
 def global_statistics():
     with ui.header(elevated=True).style('background-color: #3874c8').classes('items-center justify-between'):
@@ -312,6 +352,7 @@ def global_statistics():
             with ui.tabs().classes('w-full') as tabs_main:
                     tabs_main_bytes = ui.tab('bytes')
                     tabs_main_count = ui.tab('count')
+                    tabs_main_misc = ui.tab('miscellaneous')
 
             with ui.tab_panels(tabs_main, value=tabs_main_bytes).classes('w-full'):
                 with ui.tab_panel(tabs_main_bytes):
@@ -319,3 +360,9 @@ def global_statistics():
 
                 with ui.tab_panel(tabs_main_count):
                     create_record_count_sub_tabs()
+
+                with ui.tab_panel(tabs_main_misc):
+                    with ui.row():
+                        for g in g_misc:
+                            g.begin()
+                    ui.button('refresh', on_click=lambda: update(g_misc))
