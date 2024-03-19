@@ -110,24 +110,30 @@ class heatmap:
     def update(self):
         data = get_heatmap_data(self.group_by_y, self.group_by_x, self.sum_bytes)
 
-        w = 0
-        h = 0
         highest = 0
         for element in data:
             highest = max(highest, element[2])
-            w = max(w, element[1])
-            h = max(h, element[0])
 
-        x_mul = 20
-        y_mul = 20
+        x_mul = 25  # rectangles
+        y_mul = 25
+        t_w   = 15  # text
+        t_h   = 15
 
-        svg = f'<svg viewBox="0 0 {w * x_mul} {h * y_mul}" width="{w * x_mul}" height="{h * y_mul}" xmlns="http://www.w3.org/2000/svg">\n'
+        svg = f'<svg viewBox="0 0 {self.width * x_mul + t_w * 1.5} {self.height * y_mul + t_h * 1.5}" width="{self.width * x_mul}" height="{self.height * y_mul}" xmlns="http://www.w3.org/2000/svg">\n'
+        svg += '<style>.small { font: italic ' + f'{t_h}px' + ' serif; fill: black; }</style>'
+
+        for x in range(self.width):
+            svg += f'<text x="{x * x_mul + t_w * (1.5 + 0.5)}" y="{t_h}" class="small">{x}</text>'
+
+        for y in range(self.height):
+            svg += f'<text x="{t_w // 2}" y="{y * y_mul + t_h * (1.5 + 1.0)}" class="small">{y + 1}</text>'
+
         for element in data:
             p = element[2] / highest
             r = 255 * p
             g = 255 - r
             b = 0
-            svg += f'<rect width="{x_mul}" height="{y_mul}" x="{element[1] * x_mul}" y="{element[0] * y_mul}" fill="#{int(r):02x}{int(g):02x}{int(b):02x}" />\n'
+            svg += f'<rect width="{x_mul}" height="{y_mul}" x="{int(element[1] * x_mul) + t_w * 1.5}" y="{int(element[0] * y_mul) + t_h * 1.5}" fill="#{int(r):02x}{int(g):02x}{int(b):02x}" />\n'
         svg += '</svg>'
 
         with self.grid:
