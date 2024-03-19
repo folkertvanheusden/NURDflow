@@ -261,6 +261,13 @@ async def update(objs):
     for o in objs:
         await o.update()
 
+async def create_tab(objects, collection):
+    with ui.row():
+        for o in objects:
+            await o.begin()
+            collection.append(o)
+    ui.button('refresh', on_click=lambda: update(objects))
+
 async def create_byte_sum_sub_tabs():
     with ui.column().classes('w-full'):
         with ui.tabs().classes('w-full') as tabs_tb:
@@ -274,47 +281,21 @@ async def create_byte_sum_sub_tabs():
 
         with ui.tab_panels(tabs_tb, value=tabs_tb_one).classes('w-full'):
             with ui.tab_panel(tabs_tb_one):
-                with ui.row():
-                    for g in g_hour_b:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_hour_b))
+                await create_tab(g_hour_b, objs)
 
             with ui.tab_panel(tabs_tb_two):
-                with ui.row():
-                    for g in g_dow_b:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_dow_b))
+                await create_tab(g_dow_b, objs)
 
             with ui.tab_panel(tabs_tb_three):
-                with ui.row():
-                    for g in g_dom_b:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_dom_b))
+                await create_tab(g_dom_b, objs)
 
             with ui.tab_panel(tabs_tb_four):
-                with ui.row():
-                    for g in g_month_b:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_month_b))
+                await create_tab(g_month_b, objs)
 
             with ui.tab_panel(tabs_tb_five):
-                with ui.row():
-                    for g in g_heatmap_b:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_heatmap_b))
+                await create_tab(g_heatmap_b, objs)
 
-            tasks = []
-            for o in objs:
-                tasks.append(asyncio.create_task(o.refresh_data()))
-            await asyncio.gather(*tasks)
-
-            for o in objs:
-                await o.update()
+            await update(objs)
 
 async def create_record_count_sub_tabs():
     with ui.column().classes('w-full'):
@@ -329,47 +310,21 @@ async def create_record_count_sub_tabs():
 
         with ui.tab_panels(tabs_tc, value=tabs_tc_one).classes('w-full'):
             with ui.tab_panel(tabs_tc_one):
-                with ui.row():
-                    for g in g_hour_c:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_hour))
+                await create_tab(g_hour_c, objs)
 
             with ui.tab_panel(tabs_tc_two):
-                with ui.row():
-                    for g in g_dow_c:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_dow))
+                await create_tab(g_dow_c, objs)
 
             with ui.tab_panel(tabs_tc_three):
-                with ui.row():
-                    for g in g_dom_c:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_dom))
+                await create_tab(g_dom_c, objs)
 
             with ui.tab_panel(tabs_tc_four):
-                with ui.row():
-                    for g in g_month_c:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_month))
+                await create_tab(g_month_c, objs)
 
             with ui.tab_panel(tabs_tc_five):
-                with ui.row():
-                    for g in g_heatmap_c:
-                        await g.begin()
-                        objs.append(g)
-                ui.button('refresh', on_click=lambda: update(g_heatmap_c))
+                await create_tab(g_heatmap_c, objs)
 
-            tasks = []
-            for o in objs:
-                tasks.append(asyncio.create_task(o.refresh_data()))
-            await asyncio.gather(*tasks)
-
-            for o in objs:
-                await o.update()
+            await update(objs)
 
 g_misc = []
 g_misc.append(bar_chart('number of records per flow-duration interval', get_flow_duration_groups))
@@ -395,6 +350,8 @@ async def global_statistics():
                     tabs_main_count = ui.tab('count')
                     tabs_main_misc = ui.tab('miscellaneous')
 
+            objs = []
+
             with ui.tab_panels(tabs_main, value=tabs_main_bytes).classes('w-full'):
                 with ui.tab_panel(tabs_main_bytes):
                     await create_byte_sum_sub_tabs()
@@ -403,9 +360,8 @@ async def global_statistics():
                     await create_record_count_sub_tabs()
 
                 with ui.tab_panel(tabs_main_misc):
-                    with ui.row():
-                        for g in g_misc:
-                            await g.begin()  # TODO obj
-                    ui.button('refresh', on_click=lambda: update(g_misc))
+                    await create_tab(g_misc, objs)
+
+            await update(objs)
 
     print('TOOK', time.time() - tstart)
