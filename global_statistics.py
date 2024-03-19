@@ -269,6 +269,8 @@ async def create_tab(objects, collection):
     ui.button('refresh', on_click=lambda: update(objects))
 
 async def create_byte_sum_sub_tabs():
+    objs = []
+
     with ui.column().classes('w-full'):
         with ui.tabs().classes('w-full') as tabs_tb:
             tabs_tb_one = ui.tab('per hour')
@@ -277,8 +279,6 @@ async def create_byte_sum_sub_tabs():
             tabs_tb_four = ui.tab('per month')
             tabs_tb_five = ui.tab('heatmap')
  
-        objs = []
-
         with ui.tab_panels(tabs_tb, value=tabs_tb_one).classes('w-full'):
             with ui.tab_panel(tabs_tb_one):
                 await create_tab(g_hour_b, objs)
@@ -295,9 +295,11 @@ async def create_byte_sum_sub_tabs():
             with ui.tab_panel(tabs_tb_five):
                 await create_tab(g_heatmap_b, objs)
 
-            await update(objs)
+    return objs
 
 async def create_record_count_sub_tabs():
+    objs = []
+
     with ui.column().classes('w-full'):
         with ui.tabs().classes('w-full') as tabs_tc:
             tabs_tc_one = ui.tab('per hour')
@@ -305,8 +307,6 @@ async def create_record_count_sub_tabs():
             tabs_tc_three = ui.tab('per day of the month')
             tabs_tc_four = ui.tab('per month')
             tabs_tc_five = ui.tab('heatmap')
-
-        objs = []
 
         with ui.tab_panels(tabs_tc, value=tabs_tc_one).classes('w-full'):
             with ui.tab_panel(tabs_tc_one):
@@ -324,7 +324,7 @@ async def create_record_count_sub_tabs():
             with ui.tab_panel(tabs_tc_five):
                 await create_tab(g_heatmap_c, objs)
 
-            await update(objs)
+    return objs
 
 g_misc = []
 g_misc.append(bar_chart('number of records per flow-duration interval', get_flow_duration_groups))
@@ -354,10 +354,10 @@ async def global_statistics():
 
             with ui.tab_panels(tabs_main, value=tabs_main_bytes).classes('w-full'):
                 with ui.tab_panel(tabs_main_bytes):
-                    await create_byte_sum_sub_tabs()
+                    objs += await create_byte_sum_sub_tabs()
 
                 with ui.tab_panel(tabs_main_count):
-                    await create_record_count_sub_tabs()
+                    objs += await create_record_count_sub_tabs()
 
                 with ui.tab_panel(tabs_main_misc):
                     await create_tab(g_misc, objs)
