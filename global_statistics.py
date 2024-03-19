@@ -1,9 +1,11 @@
 #! /usr/bin/python3
 
+import asyncio
 import copy
 from data import get_record, get_unique_ip_count, get_count_per, get_count_per_src_dst_address, get_count_per_src_dst_mac_address, get_heatmap_data, get_flow_duration_groups
 from enum import Enum
 from nicegui import ui
+import time
 
 class graph:
     class SumOrCount(Enum):
@@ -19,6 +21,7 @@ class graph:
         self.items = items
         self.where = where
         self.sum_bytes = sum_bytes
+        self.plot = None
 
         fig_template = {
             'data': [
@@ -55,10 +58,8 @@ class graph:
             plot = ui.plotly(self.fig).classes('w-100 h-80')
 
         self.plot = plot
-        await self.update()
 
-    @ui.refreshable
-    async def update(self):
+    async def refresh_data(self):
         item_names = [v[0] for v in self.items]
         for iy in range(len(self.items)):
             self.fig['data'][iy]['x'].clear()
@@ -86,7 +87,11 @@ class graph:
                 for item in data:
                     self.fig['data'][iy]['x'].append(item[0])
                     self.fig['data'][iy]['y'].append(item[1 + iy])
-        self.plot.update()
+
+    @ui.refreshable
+    async def update(self):
+        if self.plot:
+            self.plot.update()
 
 class heatmap:
     class SumOrCount(Enum):
@@ -105,10 +110,8 @@ class heatmap:
         with ui.card():
             g = ui.grid(columns=1)
         self.grid = g
-        await self.update()
 
-    @ui.refreshable
-    async def update(self):
+    async def refresh_data(self):
         data = await get_heatmap_data(self.group_by_y, self.group_by_x, self.sum_bytes)
 
         highest = 0
@@ -137,9 +140,13 @@ class heatmap:
             svg += f'<rect width="{x_mul}" height="{y_mul}" x="{int(element[1] * x_mul) + t_w * 1.5}" y="{int(element[0] * y_mul) + t_h * 1.5}" fill="#{int(r):02x}{int(g):02x}{int(b):02x}" />\n'
         svg += '</svg>'
 
+        self.svg = svg
+
+    @ui.refreshable
+    async def update(self):
         with self.grid:
             self.grid.clear()
-            ui.html(svg)
+            ui.html(self.svg)
 
 class bar_chart:
     def __init__(self, title, data_getter):
@@ -160,10 +167,8 @@ class bar_chart:
     async def begin(self):
         with ui.card():
             self.plot = ui.highchart(self.fig).classes('w-150 h-150')
-        await self.update()
 
-    @ui.refreshable
-    async def update(self):
+    async def refresh_data(self):
         data = await self.data_getter(40)
 
         self.fig['xAxis']['categories'].clear()
@@ -174,8 +179,9 @@ class bar_chart:
         for item in data:
             self.fig['series'][0]['data'].append(item[1])
 
+    @ui.refreshable
+    async def update(self):
         self.plot.update()
-
 
 ports = ((80, 'HTTP'), (443, 'HTTPS'), (5900, 'VNC'), (123, 'NTP'))
 ip_versions = ((4, 'IPv4'), (6, 'IPv6'))
@@ -247,9 +253,13 @@ g_heatmap_b.append(heatmap(7, 'ISODOW', 24, 'HOUR', graph.SumOrCount.bcount))
 g_heatmap_c = []
 g_heatmap_c.append(heatmap(7, 'ISODOW', 24, 'HOUR', graph.SumOrCount.ncount))
 
-async def update(graphs):
-    for g in graphs:
-        g.update()
+async def update(objs):
+    tasks = []
+    for o in objs:
+        tasks.append(asyncio.create_task(o.refresh_data()))
+    await asyncio.gather(*tasks)
+    for o in objs:
+        await o.update()
 
 async def create_byte_sum_sub_tabs():
     with ui.column().classes('w-full'):
@@ -259,37 +269,52 @@ async def create_byte_sum_sub_tabs():
             tabs_tb_three = ui.tab('per day of the month')
             tabs_tb_four = ui.tab('per month')
             tabs_tb_five = ui.tab('heatmap')
+ 
+        objs = []
 
         with ui.tab_panels(tabs_tb, value=tabs_tb_one).classes('w-full'):
             with ui.tab_panel(tabs_tb_one):
                 with ui.row():
                     for g in g_hour_b:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_hour_b))
 
             with ui.tab_panel(tabs_tb_two):
                 with ui.row():
                     for g in g_dow_b:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_dow_b))
 
             with ui.tab_panel(tabs_tb_three):
                 with ui.row():
                     for g in g_dom_b:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_dom_b))
 
             with ui.tab_panel(tabs_tb_four):
                 with ui.row():
                     for g in g_month_b:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_month_b))
 
             with ui.tab_panel(tabs_tb_five):
                 with ui.row():
                     for g in g_heatmap_b:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_heatmap_b))
+
+            tasks = []
+            for o in objs:
+                tasks.append(asyncio.create_task(o.refresh_data()))
+            await asyncio.gather(*tasks)
+
+            for o in objs:
+                await o.update()
 
 async def create_record_count_sub_tabs():
     with ui.column().classes('w-full'):
@@ -300,42 +325,58 @@ async def create_record_count_sub_tabs():
             tabs_tc_four = ui.tab('per month')
             tabs_tc_five = ui.tab('heatmap')
 
+        objs = []
+
         with ui.tab_panels(tabs_tc, value=tabs_tc_one).classes('w-full'):
             with ui.tab_panel(tabs_tc_one):
                 with ui.row():
                     for g in g_hour_c:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_hour))
 
             with ui.tab_panel(tabs_tc_two):
                 with ui.row():
                     for g in g_dow_c:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_dow))
 
             with ui.tab_panel(tabs_tc_three):
                 with ui.row():
                     for g in g_dom_c:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_dom))
 
             with ui.tab_panel(tabs_tc_four):
                 with ui.row():
                     for g in g_month_c:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_month))
 
             with ui.tab_panel(tabs_tc_five):
                 with ui.row():
                     for g in g_heatmap_c:
                         await g.begin()
+                        objs.append(g)
                 ui.button('refresh', on_click=lambda: update(g_heatmap_c))
+
+            tasks = []
+            for o in objs:
+                tasks.append(asyncio.create_task(o.refresh_data()))
+            await asyncio.gather(*tasks)
+
+            for o in objs:
+                await o.update()
 
 g_misc = []
 g_misc.append(bar_chart('number of records per flow-duration interval', get_flow_duration_groups))
 
-@ui.page('/global-statistics', response_timeout=20)
+@ui.page('/global-statistics', response_timeout=60)
 async def global_statistics():
+    tstart = time.time()
     with ui.header(elevated=True).style('background-color: #3874c8').classes('items-center justify-between'):
         with ui.row():
             ui.label('NURDflow').style('font-size: max(10pt, 3vh)')
@@ -364,5 +405,7 @@ async def global_statistics():
                 with ui.tab_panel(tabs_main_misc):
                     with ui.row():
                         for g in g_misc:
-                            await g.begin()
+                            await g.begin()  # TODO obj
                     ui.button('refresh', on_click=lambda: update(g_misc))
+
+    print('TOOK', time.time() - tstart)
