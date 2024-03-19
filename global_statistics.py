@@ -67,9 +67,9 @@ class graph:
             self.fig['data'][-1]['x'].clear()
             self.fig['data'][-1]['y'].clear()
             if self.sum_bytes == graph.SumOrCount.bcount:
-                data = self.data_function(self.group_by, self.column, self.items, self.where, True)
+                data = await self.data_function(self.group_by, self.column, self.items, self.where, True)
             elif self.sum_bytes == graph.SumOrCount.ncount:
-                data = self.data_function(self.group_by, self.column, self.items, self.where, False)
+                data = await self.data_function(self.group_by, self.column, self.items, self.where, False)
             for item in data:
                 if item[2] in item_names:
                     nr = item_names.index(item[2])
@@ -79,9 +79,9 @@ class graph:
                 self.fig['data'][nr]['y'].append(item[1])
         else:
             if self.sum_bytes == graph.SumOrCount.bcount:
-                data = self.data_function(self.group_by, True)
+                data = await self.data_function(self.group_by, True)
             elif self.sum_bytes == graph.SumOrCount.ncount:
-                data = self.data_function(self.group_by, False)
+                data = await self.data_function(self.group_by, False)
             for iy in range(len(self.items)):
                 for item in data:
                     self.fig['data'][iy]['x'].append(item[0])
@@ -109,7 +109,7 @@ class heatmap:
 
     @ui.refreshable
     async def update(self):
-        data = get_heatmap_data(self.group_by_y, self.group_by_x, self.sum_bytes)
+        data = await get_heatmap_data(self.group_by_y, self.group_by_x, self.sum_bytes)
 
         highest = 0
         for element in data:
@@ -164,7 +164,7 @@ class bar_chart:
 
     @ui.refreshable
     async def update(self):
-        data = self.data_getter(40)
+        data = await self.data_getter(40)
 
         self.fig['xAxis']['categories'].clear()
         for item in data:
@@ -334,7 +334,7 @@ async def create_record_count_sub_tabs():
 g_misc = []
 g_misc.append(bar_chart('number of records per flow-duration interval', get_flow_duration_groups))
 
-@ui.page('/global-statistics')
+@ui.page('/global-statistics', response_timeout=20)
 async def global_statistics():
     with ui.header(elevated=True).style('background-color: #3874c8').classes('items-center justify-between'):
         with ui.row():
