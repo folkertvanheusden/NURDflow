@@ -83,10 +83,12 @@ async def get_heatmap_data(gb_y, gb_x, sum_):
 async def get_flow_duration_groups(n_values):
     ts = time.time()
     pool = get_db()
+    resolution = 1  # ms
     async with pool.acquire() as conn:
         t = time.time()
-        value = await conn.fetchval('SELECT MAX(flow_end_time - flow_start_time) AS max FROM records WHERE ip_protocol=6')
-        divider = value / n_values
-        values = await conn.fetch(f'SELECT ROUND(AVG(flow_end_time - flow_start_time) / 1000) AS duration, COUNT(*) AS n FROM records WHERE ip_protocol=6 GROUP BY FLOOR((flow_end_time - flow_start_time) / {divider}) ORDER BY duration ASC')
+        max_value = await conn.fetchval('SELECT MAX(duration) AS max_duration FROM (SELECT AVG(flow_end_time - flow_start_time) AS duration, COUNT(*) AS n FROM records WHERE ip_protocol=6 GROUP BY FLOOR((flow_end_time - flow_start_time) / $1) ORDER BY n DESC limit 10) AS i', resolution)
+        divider = max_value / n_values
+        values = await conn.fetch(f'SELECT AVG(flow_end_time - flow_start_time) AS duration, COUNT(*) AS n FROM records WHERE ip_protocol=6 GROUP BY FLOOR((flow_end_time - flow_start_time) / {divider}) ORDER BY duration ASC')
+        values = [v for v in values if v[0] <= max_value]
     print(time.time(), 'get_flow_duration_groups', time.time() - t, t - ts)
     return values

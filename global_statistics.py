@@ -159,7 +159,7 @@ class bar_chart:
             'xAxis': {'categories': []},
             'yAxis': {'name': 'count'},
             'series': [
-                {'name': 'duration-count', 'data': []},
+                {'name': 'duration-count versus ms', 'data': []},
             ],
         }
 
