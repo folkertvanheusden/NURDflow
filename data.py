@@ -86,7 +86,7 @@ async def get_flow_duration_groups(n_values):
     resolution = 1  # ms
     async with pool.acquire() as conn:
         t = time.time()
-        max_value = await conn.fetchval('SELECT MAX(duration) AS max_duration FROM (SELECT AVG(flow_end_time - flow_start_time) AS duration, COUNT(*) AS n FROM records WHERE ip_protocol=6 GROUP BY FLOOR((flow_end_time - flow_start_time) / $1) ORDER BY n DESC limit 10) AS i', resolution)
+        max_value = await conn.fetchval('select percentile_cont(0.5) WITHIN GROUP (ORDER BY flow_end_time - flow_start_time) from records where ip_protocol=6')
         divider = max_value / n_values
         values = await conn.fetch(f'SELECT AVG(flow_end_time - flow_start_time) AS duration, COUNT(*) AS n FROM records WHERE ip_protocol=6 GROUP BY FLOOR((flow_end_time - flow_start_time) / {divider}) ORDER BY duration ASC')
         values = [v for v in values if v[0] <= max_value]
