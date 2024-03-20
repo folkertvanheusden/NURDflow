@@ -174,7 +174,7 @@ class bar_chart:
 
         self.fig['xAxis']['categories'].clear()
         for item in data:
-            self.fig['xAxis']['categories'].append(item[0])
+            self.fig['xAxis']['categories'].append(f'{item[0]:.2f}')
 
         self.fig['series'][0]['data'].clear()
         for item in data:
