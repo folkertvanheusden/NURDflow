@@ -8,6 +8,56 @@ from enum import Enum
 from nicegui import ui
 import time
 
+class as_is_plot:
+    class SumOrCount(Enum):
+        bcount = True
+        ncount = False
+        none   = False
+
+    def __init__(self, title, sum_bytes: SumOrCount):
+        self.title = title
+        self.sum_bytes = sum_bytes
+        self.plot = None
+
+        fig_template = {
+            'data': [
+            ],
+            'layout': {
+                'margin': {'l': 30, 'r': 0, 't': 0, 'b': 15},
+                'plot_bgcolor': '#E5ECF6',
+                'xaxis': {'gridcolor': 'white'},
+                'yaxis': {'gridcolor': 'white'},
+            },
+        }
+
+        self.fig = copy.deepcopy(fig_template)
+
+        self.fig['data'].append({
+                'type': 'scatter',
+                'name': title,
+                'x': [],
+                'y': [],
+            })
+
+    async def begin(self):
+        with ui.card().classes('w-100 h-80'):
+            ui.label(self.title)
+            plot = ui.plotly(self.fig).classes('w-100 h-80')
+        self.plot = plot
+
+    async def refresh_data(self, data):
+        self.fig['data'][0]['x'].clear()
+        self.fig['data'][0]['y'].clear()
+        for item in data:
+            self.fig['data'][0]['x'].append(item['ts'])
+            self.fig['data'][0]['y'].append(item['sum'] if self.sum_bytes == line_plot.SumOrCount.bcount else item['count'])
+
+    @ui.refreshable
+    async def update(self):
+        if self.plot:
+            self.plot.update()
+
+
 class line_plot:
     class SumOrCount(Enum):
         bcount = True
@@ -193,6 +243,12 @@ objects_heatmaps.append({ 'graph-bytes': heatmap(24, 'hour', 7, 'isoDayOfWeek', 
                           'data': lambda: get_heatmap('hour', 'isoDayOfWeek'),
                           'title': 'when are the most sessions' })
 
+objects_per_as_is = []
+objects_per_as_is.append({ 'graph-bytes': as_is_plot('as-is bytes', line_plot.SumOrCount.bcount),
+                           'graph-count': as_is_plot('as-is packet count', line_plot.SumOrCount.ncount),
+                           'data': lambda: get_field_grouped('data.octetDeltaCount'),
+                           'title': 'on-going data' })
+
 objects_per_hour = []
 objects_per_hour.append({ 'graph-bytes': line_plot('bytes per hour', 'hour', line_plot.SumOrCount.bcount),
                           'graph-count': line_plot('count per hour', 'hour', line_plot.SumOrCount.ncount),
@@ -266,6 +322,7 @@ async def global_statistics():
         with ui.column().classes('w-full'):
             with ui.tabs().classes('w-full') as tabs_main:
                 tabs_main_heatmaps = ui.tab('heatmaps')
+                tabs_main_as_is = ui.tab('as-is')
                 tabs_main_hour = ui.tab('per hour')
                 tabs_main_day_of_week = ui.tab('per day of week')
                 tabs_main_month = ui.tab('per month')
@@ -274,6 +331,10 @@ async def global_statistics():
                 with ui.tab_panel(tabs_main_heatmaps):
                     await create(objects_heatmaps)
                     await update(objects_heatmaps)
+
+                with ui.tab_panel(tabs_main_as_is):
+                    await create(objects_per_as_is)
+                    await update(objects_per_as_is)
 
                 with ui.tab_panel(tabs_main_hour):
                     await create(objects_per_hour)
