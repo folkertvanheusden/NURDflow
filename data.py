@@ -1,94 +1,151 @@
 #! /usr/bin/python3
 
 import asyncio
-import asyncpg
+import configparser
+from motor.motor_asyncio import AsyncIOMotorClient
 import time
 
+collection = None
+db_url = None
 
-connection = None
+def get_collection():
+    return collection
+
 async def init_db():
-    global connection
-    connection = await asyncpg.create_pool(database='ipfixer', user='ipfixer', password='ipfixer')
+    global collection
+    global db_url
+    config = configparser.ConfigParser()
+    config.read('nurdflow.ini')
+    db_url = config['database']['url']
+    collection = config['database']['collection']
 
 def get_db():
-    global connection
-    return connection
+    return AsyncIOMotorClient(db_url).netflow
 
-async def get_record(group_by, sum_):
+async def get_record(group_by):
     ts = time.time()
-    pool = get_db()
-    async with pool.acquire() as conn:
-        t = time.time()
-        what = 'SUM(n_bytes)' if sum_ else 'COUNT(*) AS n'
-        values = await conn.fetch('SELECT EXTRACT(' + group_by + ' FROM ts) AS dt, ' + what + ' FROM records GROUP BY dt ORDER BY dt ASC')
+    db = get_db()
+    t = time.time()
+    if group_by in ('isoDayOfWeek'):
+        values = await db[collection].aggregate([
+                {
+                    '$group': {
+                      '_id': { '$' + group_by: "$export_time" },
+                      'sum': { '$sum': '$data.octetDeltaCount' },
+                      'count': { '$sum': 1 },
+                    },
+                },
+                { '$sort': { '_id': 1 } }
+            ]
+            ).to_list(None)
+    else:
+        values = await db[collection].aggregate([
+              {
+                '$group': {
+                  '_id': { '$dateTrunc': { 'date': "$export_time", 'unit': group_by } },
+                  'sum': { '$sum': '$data.octetDeltaCount' },
+                  'count': { '$sum': 1 },
+                },
+              },
+              { '$sort': { '_id': 1 } }
+            ]).to_list(None)
     print(time.time(), 'get_record', time.time() - t, t - ts)
     return values
 
-async def get_unique_ip_count(group_by, sum_):
-    assert sum_ == False
+async def get_unique_address_count(field, group_by):
     ts = time.time()
-    pool = get_db()
-    async with pool.acquire() as conn:
-        t = time.time()
-        values = await conn.fetch("SELECT EXTRACT(" + group_by + " FROM ts) AS dt, COUNT(DISTINCT(source_address->'sourceIPv4Address')) AS IPv4, COUNT(DISTINCT(source_address->'sourceIPv6Address')) AS IPv6 FROM records GROUP BY dt ORDER BY dt ASC")
+    db = get_db()
+    t = time.time()
+    values = []
+    if group_by in ('dayOfWeek'):
+        n = await db[collection].aggregate([
+	            { '$match': { field: { '$exists': True } } },
+                { '$group': { '_id' : { 'ts_component': {'$' + group_by: '$export_time'}, 'address': '$' + field } } },
+                { '$group': { '_id' : '$_id.isodow', 'count' : { '$sum' : 1 } }
+  	            }
+	       ]).to_list(None)
+    else:
+        n = await db[collection].aggregate([
+	            { '$match': { field: { '$exists': True } } },
+                { '$group': { '_id' : { 'ts_component': { '$dateTrunc': { 'date': "$export_time", 'unit': group_by } }, 'address': '$' + field } } },
+                { '$group': { '_id' : '$_id.ts_component', 'count' : { '$sum' : 1 } }
+  	            }
+	       ]).to_list(None)
+    for record in n:
+        values.append((record['_id'], record['count']))
+    print(time.time(), 'get_unique_ip_address_count', time.time() - t, t - ts)
+    return values
+
+async def get_COUNT_PER(field, field_values, group_by):
+    ts = time.time()
+    db = get_db()
+    t = time.time()
+    field_compare = { '$' + group_by: "$export_time" } if group_by in ('isoDayOfWeek') else { '$' + group_by: "$export_time" }
+    field_values = [v[0] for v in field_values]
+
+    cursor1 = db[collection].aggregate([
+            {
+                '$match': { field: { '$exists': True } },
+                '$match': { field: { '$in': field_values } },
+            },
+            {
+                '$group': {
+                    '_id': { 'ts_component' : field_compare, 'field': '$' + field },
+                    'sum': { '$sum': '$data.octetDeltaCount' },
+                    'count': { '$sum': 1 },
+                },
+            },
+            { '$sort': { '_id.ts_component':1, field: 1 } },
+        ])
+
+    cursor2 = db[collection].aggregate([
+            {
+                '$match': { field: { '$exists': True } },
+                '$match': { field: { '$nin': field_values } },
+            },
+            {
+                '$group': {
+                    '_id': { 'ts_component' : field_compare },
+                    'sum': { '$sum': '$data.octetDeltaCount' },
+                    'count': { '$sum': 1 },
+                },
+            },
+            { '$sort': { '_id.ts_component':1 } },
+        ])
+
+    values = await cursor1.to_list(None)
+
+    for record in await cursor2.to_list(None):
+        record['_id']['field'] = 'other'
+        values.append(record)
+
     print(time.time(), 'get_unique_ip_count', time.time() - t, t - ts)
     return values
 
-async def get_count_per(group_by, column, items, where, sum_bytes):
-    values = tuple([v[0] for v in items])
-    w = 'AND ' + where if where != None else ''
+async def get_heatmap(group_by_1, group_by_2):
     ts = time.time()
-    pool = get_db()
-    async with pool.acquire() as conn:
-        t = time.time()
-        if sum_bytes:
-            values = await conn.fetch('SELECT EXTRACT(' + group_by + ' FROM ts) AS dt, SUM(n_bytes) AS n, ' + column + ' FROM records WHERE ' + column + ' = ANY($1) GROUP BY dt, ' + column + ' UNION ALL SELECT EXTRACT(' + group_by + ' FROM ts) AS dt, SUM(n_bytes) AS n, -1 AS ' + column + ' FROM records WHERE NOT ' + column + '= ANY($2) ' + w + ' GROUP BY dt ORDER BY dt ASC', values, values)
-        else:
-            values = await conn.fetch('SELECT EXTRACT(' + group_by + ' FROM ts) AS dt, COUNT(*) AS n, ' + column + ' FROM records WHERE ' + column + ' = ANY($1) GROUP BY dt, ' + column + ' UNION ALL SELECT EXTRACT(' + group_by + ' FROM ts) AS dt, COUNT(*) AS n, -1 AS ' + column + ' FROM records WHERE NOT ' + column + ' = ANY($2) ' + w + ' GROUP BY dt ORDER BY dt ASC', values, values)
-    print(time.time(), 'get_count_per', time.time() - t, t - ts)
+    db = get_db()
+    t = time.time()
+    field_1_compare = { '$' + group_by_1: "$export_time" } if group_by_1 in ('isoDayOfWeek') else { '$' + group_by_1: "$export_time" }
+    field_2_compare = { '$' + group_by_2: "$export_time" } if group_by_2 in ('isoDayOfWeek') else { '$' + group_by_2: "$export_time" }
+    cursor = db[collection].aggregate([
+            {
+                '$group': {
+                    '_id': { 'field_1': field_1_compare, 'field_2': field_2_compare },
+                    'sum': { '$sum': '$data.octetDeltaCount' },
+                    'count': { '$sum': 1 },
+                },
+            },
+            { '$sort': { 'sum': -1, 'count': -1 } },
+        ])
+    values = await cursor.to_list(None)
+    print(time.time(), 'get_unique_ip_count', time.time() - t, t - ts)
     return values
 
-async def get_count_per_src_dst_address(group_by, sum_):
-    assert sum_ == False
-    ts = time.time()
-    pool = get_db()
-    async with pool.acquire() as conn:
-        t = time.time()
-        values = await conn.fetch("SELECT EXTRACT(" + group_by + " FROM ts) AS dt, COUNT(DISTINCT(concat(source_address->'sourceIPv4Address', destination_address->'destinationIPv4Address'))) AS n4, COUNT(DISTINCT(concat(source_address->'sourceIPv6Address', destination_address->'destinationIPv6Address'))) FROM records GROUP BY dt ORDER BY dt ASC")
-    print(time.time(), 'get_count_per_src_dst_address', time.time() - t, t - ts)
-    return values
-
-async def get_count_per_src_dst_mac_address(group_by, sum_):
-    assert sum_ == False
-    ts = time.time()
-    pool = get_db()
-    async with pool.acquire() as conn:
-        t = time.time()
-        values = await conn.fetch("SELECT EXTRACT(" + group_by + " FROM ts) AS dt, COUNT(DISTINCT(miscellaneous->'sourceMacAddress', destination_address->'postDestinationMacAddress')) AS n FROM records GROUP BY dt ORDER BY dt ASC")
-    print(time.time(), 'get_count_per_src_dst_mac_address', time.time() - t, t - ts)
-    return values
-
-async def get_heatmap_data(gb_y, gb_x, sum_):
-    ts = time.time()
-    pool = get_db()
-    async with pool.acquire() as conn:
-        t = time.time()
-        if sum_:
-            values = await conn.fetch("SELECT EXTRACT(" + gb_y + " FROM ts) AS dty, EXTRACT(" + gb_x + " FROM ts) AS dtx, SUM(n_bytes) AS n FROM records GROUP BY dty, dtx ORDER BY dty, dtx ASC")
-        else:
-            values = await conn.fetch("SELECT EXTRACT(" + gb_y + " FROM ts) AS dty, EXTRACT(" + gb_x + " FROM ts) AS dtx, COUNT(*) AS n FROM records GROUP BY dty, dtx ORDER BY dty, dtx ASC")
-    print(time.time(), 'get_heatmap_data', time.time() - t, t - ts)
-    return values
-
-async def get_flow_duration_groups(n_values):
-    ts = time.time()
-    pool = get_db()
-    resolution = 1  # ms
-    async with pool.acquire() as conn:
-        t = time.time()
-        max_value = await conn.fetchval('select percentile_cont(0.5) WITHIN GROUP (ORDER BY flow_end_time - flow_start_time) from records where ip_protocol=6')
-        divider = max_value / n_values
-        values = await conn.fetch(f'SELECT AVG(flow_end_time - flow_start_time) AS duration, COUNT(*) AS n FROM records WHERE ip_protocol=6 GROUP BY FLOOR((flow_end_time - flow_start_time) / {divider}) ORDER BY duration ASC')
-        values = [v for v in values if v[0] <= max_value]
-    print(time.time(), 'get_flow_duration_groups', time.time() - t, t - ts)
-    return values
+if __name__ == "__main__":
+    asyncio.run(get_record('hour'))
+    asyncio.run(get_unique_address_count('data.sourceIPv4Address', 'hour'))
+    asyncio.run(get_COUNT_PER('data.destinationTransportPort', [ 22, 80, 123, 443 ], 'hour'))
+    asyncio.run(get_heatmap('hour', 'isoDayOfWeek'))
+    print()
+    asyncio.run(get_COUNT_PER('data.destinationTransportPort', [ 22, 80 ], 'isoDayOfWeek'))
